@@ -34,6 +34,18 @@ class SamplerData:
         except Exception:
             return []
 
+    def get_second_table_units(self):
+        if not self.youngest_file:
+            return []
+        try:
+            with fits.open(self.youngest_file) as hdul:
+                if len(hdul) < 2 or not hasattr(hdul[1], 'columns'):
+                    return []
+                self.colnames = hdul[1].columns.units
+                return self.colnames
+        except Exception:
+            return []
+        
     def datetime_to_mjd(self, dt):
         """
         Converts a datetime object to Modified Julian Date (MJD) using astropy.
@@ -83,7 +95,7 @@ class SamplerData:
             list: List of FITS file paths within the datetime range, plus the file right before the range if it exists.
         """
         fits_files = [f for f in os.listdir(self.directory) if f.lower().endswith('.fits')]
-        fits_files_full = [os.path.join(self.directory, f) for f in fits_files]
+        fits_files_full = sorted([os.path.join(self.directory, f) for f in fits_files])
         files_in_range = []
         before_start = None
         before_start_dt = None

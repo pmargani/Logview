@@ -8,7 +8,7 @@ class PlotData:
     """
     Container for x and y data to be plotted.
     """
-    def __init__(self, x, y_list, x_col, y_cols, y_expr, sampler_name, y2_list=None, y2_cols=None, y2_expr=None, date_plot=False):
+    def __init__(self, x, y_list, x_col, y_cols, y_expr, sampler_name, col_units, y2_list=None, y2_cols=None, y2_expr=None, date_plot=False):
         self.x = x
         self.y_list = y_list  # list of y arrays
         self.x_col = x_col
@@ -16,6 +16,7 @@ class PlotData:
         self.y_expr  = y_expr 
         self.date_plot = date_plot
         self.sampler_name = sampler_name
+        self.col_units = col_units  # dictionary of column units
 
         self.y2_list = y2_list if y2_list is not None else []  # list of second y arrays
         self.y2_cols = y2_cols if y2_cols is not None else []   # list of second y column names
@@ -41,13 +42,15 @@ class PlotData:
             for y, y_col in zip(self.y_list, self.y_cols):
                 color = next(color_iter)
                 print("plot_date for y_col", y_col)
-                ax.plot_date(x_mjd, y, '-', label=y_col, color=color)
+                label = f"{y_col} ({self.col_units.get(y_col, '')})"
+                ax.plot_date(x_mjd, y, '-', label=label, color=color)
             ax.set_xlabel(x_mjd[0].strftime('%Y-%m-%d %H:%M:%S'))
         else:
             ax.set_xlabel(self.x_col)
             for y, y_col in zip(self.y_list, self.y_cols):
                 color = next(color_iter)
-                ax.plot(self.x, y, label=y_col, color=color)
+                label = f"{y_col} ({self.col_units.get(y_col, '')})"
+                ax.plot(self.x, y, label=label, color=color)
         label = ", ".join(self.y_cols)
         label = f"({label}){self.y_expr}" if self.y_expr else label    
         ax.set_ylabel(label)
@@ -59,11 +62,13 @@ class PlotData:
                 for y2, y2_col in zip(self.y2_list, self.y2_cols):
                     color = next(color_iter)
                     print("plot_date for y2_col", y2_col)
-                    ax2.plot_date(x_mjd, y2, '--', label=y2_col, color=color)
+                    label = f"{y2_col} ({self.col_units.get(y2_col, '')})"
+                    ax2.plot_date(x_mjd, y2, '--', label=label, color=color)
             else:
                 for y2, y2_col in zip(self.y2_list, self.y2_cols):
                     color = next(color_iter)
-                    ax2.plot(self.x, y2, '--', label=y2_col, color=color)
+                    label = f"{y2_col} ({self.col_units.get(y2_col, '')})"
+                    ax2.plot(self.x, y2, '--', label=label, color=color)
             # ax2.set_ylabel(', '.join(self.y2_cols))
             label = ", ".join(self.y2_cols)
             label = f"({label}){self.y2_expr}" if self.y2_expr else label    

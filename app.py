@@ -36,7 +36,7 @@ def run_app():
 
     app = QApplication(sys.argv)
     window = QWidget()
-    window.setWindowTitle('PySide6 Window')
+    window.setWindowTitle('GBT LogView')
     # window.setGeometry(100, 100, 400, 300)
     window.setGeometry(left, top, width, height)
 
@@ -76,22 +76,38 @@ def run_app():
             window.plot_button.setEnabled(False)
             window._sampler = None
             return
+        # get column information
         colnames = sampler.get_second_table_columns()
+        colunits = sampler.get_second_table_units()
+        col_map = {col: colunits[i] for i, col in enumerate(colnames)}  # Map column names to themselves
         if not colnames:
             QMessageBox.warning(window, 'FITS File', f'No second table HDU with columns found in {os.path.basename(youngest_file)}.')
             window.plot_button.setEnabled(False)
             window._sampler = None
             return
+        
+        # use these to populate the dropdown and list widgets
         window.x_dropdown.clear()
         window.y_list.clear()
+        for i, col in enumerate(colnames):
+            # For example, display "Column: <col>" but return <col>
+            display_text = f"{col} ({colunits[i]})" if colunits and i < len(colunits) else f"Column: {col}"
+            window.x_dropdown.addItem(display_text, userData=col)
         window.x_dropdown.addItems(colnames)
         for col in colnames:
-            item = QListWidgetItem(col)
+            display_text = f"{col} ({col_map[col]})"
+            
+            item = QListWidgetItem(display_text)
+            item.setData(0x0100, col)  # Qt.UserRole = 0x0100
             window.y_list.addItem(item)
-            item = QListWidgetItem(col)
-            window.y2_list.addItem(item)
+            item2 = QListWidgetItem(display_text)
+            item2.setData(0x0100, col)
+            window.y2_list.addItem(item2)
+
+        # finally we can enable the plot button    
         window.plot_button.setEnabled(True)
         window._sampler = sampler
+        window._col_units = col_map
         # QMessageBox.information(window, 'FITS Columns', f'Columns in second table of {os.path.basename(youngest_file)}:\n' + ', '.join(colnames))
 
     def on_plot_clicked():
@@ -109,14 +125,17 @@ def run_app():
             QMessageBox.critical(window, 'Date Error', 'Start date must be before or equal to end date.')
             return
 
-        x_col = window.x_dropdown.currentText()
+        x_col = window.x_dropdown.currentData()
+        print('Selected x column:', x_col)
         y_selected_items = window.y_list.selectedItems()
         if not y_selected_items:
             QMessageBox.critical(window, 'Selection Error', 'Please select at least one y column.')
-            return
+            return       # Use the data (Qt.UserRole) instead of the displayed text
+        y_cols = [item.data(0x0100) for item in y_selected_items]
+        print('Selected y columns:', y_cols)
+ 
         y2_selected_items = window.y2_list.selectedItems()
-        y_cols = [item.text() for item in y_selected_items]
-        y2_cols = [item.text() for item in y2_selected_items]
+        y2_cols = [item.data(0x0100) for item in y2_selected_items]
         # For now, only use the first selected y column for compatibility with get_data
         # y_col = y_cols[0]
         try:
@@ -154,7 +173,7 @@ def run_app():
         except Exception as e:
             QMessageBox.critical(window, 'Plot Error', f'Error retrieving data: {e}')
             return
-        plot_data = PlotData(x, ys, x_col, y_cols, y_expr, sampler.sampler_name, y2_list=ys2, y2_cols=y2_cols, y2_expr=y2_expr, date_plot=x_col == DMJD)
+        plot_data = PlotData(x, ys, x_col, y_cols, y_expr, sampler.sampler_name, window._col_units, y2_list=ys2, y2_cols=y2_cols, y2_expr=y2_expr, date_plot=x_col == DMJD)
         fig, ax = plot_data.plot_data()
         # Remove previous plot if exists
         if hasattr(window, 'canvas'):
