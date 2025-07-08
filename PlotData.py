@@ -8,16 +8,18 @@ class PlotData:
     """
     Container for x and y data to be plotted.
     """
-    def __init__(self, x, y_list, x_col, y_cols, sampler_name, y2_list=None, y2_cols=None, date_plot=False):
+    def __init__(self, x, y_list, x_col, y_cols, y_expr, sampler_name, y2_list=None, y2_cols=None, y2_expr=None, date_plot=False):
         self.x = x
         self.y_list = y_list  # list of y arrays
         self.x_col = x_col
         self.y_cols = y_cols  # list of y column names
+        self.y_expr  = y_expr 
         self.date_plot = date_plot
         self.sampler_name = sampler_name
 
         self.y2_list = y2_list if y2_list is not None else []  # list of second y arrays
         self.y2_cols = y2_cols if y2_cols is not None else []   # list of second y column names
+        self.y2_expr = y2_expr 
 
     def __repr__(self):
         return f"PlotData(x={self.x}, y_list={self.y_list})"
@@ -30,7 +32,7 @@ class PlotData:
         ax2 = None
 
         # Generate distinct colors for all plots
-        num_plots = len(self.y_list) + (len(self.y2_list) if self.y2_list else 0)
+        num_plots = len(self.y_list) + len(self.y2_list)
         color_map = cm.get_cmap('tab10' if num_plots <= 10 else 'tab20', num_plots)
         color_iter = iter(color_map.colors)
 
@@ -46,10 +48,12 @@ class PlotData:
             for y, y_col in zip(self.y_list, self.y_cols):
                 color = next(color_iter)
                 ax.plot(self.x, y, label=y_col, color=color)
-        ax.set_ylabel(', '.join(self.y_cols))
+        label = ", ".join(self.y_cols)
+        label = f"({label}){self.y_expr}" if self.y_expr else label    
+        ax.set_ylabel(label)
 
         # Plot y2_list on a secondary y-axis if present
-        if self.y2_list and self.y2_cols:
+        if len(self.y2_list) >0 and self.y2_cols:
             ax2 = ax.twinx()
             if self.date_plot:
                 for y2, y2_col in zip(self.y2_list, self.y2_cols):
@@ -60,7 +64,10 @@ class PlotData:
                 for y2, y2_col in zip(self.y2_list, self.y2_cols):
                     color = next(color_iter)
                     ax2.plot(self.x, y2, '--', label=y2_col, color=color)
-            ax2.set_ylabel(', '.join(self.y2_cols))
+            # ax2.set_ylabel(', '.join(self.y2_cols))
+            label = ", ".join(self.y2_cols)
+            label = f"({label}){self.y2_expr}" if self.y2_expr else label    
+            ax2.set_ylabel(label)
             # Combine legends from both axes
             lines, labels = ax.get_legend_handles_labels()
             lines2, labels2 = ax2.get_legend_handles_labels()

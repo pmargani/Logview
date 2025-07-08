@@ -185,3 +185,23 @@ class SamplerData:
                 print(f"Error processing {file_path}: {e}")
                 continue
         return np.array(result)
+
+    def apply_expression_to_data(self, data, expression):
+        """
+        Applies a Python expression to the given data array. The expression should be a string
+        that can reference 'data' as the variable.
+
+        Args:
+            data (np.ndarray): The data array to modify.
+            expression (str): The Python expression to evaluate, e.g., 'data * 2'.
+
+        Returns:
+            np.ndarray: The modified data array.
+        """
+        try:
+            # 'data' is available in the eval context
+            result = eval(expression, {"np": np}, {"data": data})
+            return result
+        except Exception as e:
+            print(f"Error evaluating expression '{expression}': {e}")
+            return data

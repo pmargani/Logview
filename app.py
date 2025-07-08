@@ -1,5 +1,8 @@
 import sys
 from datetime import datetime
+import os
+
+import numpy as np
 from PySide6.QtWidgets import QApplication, QLabel, QWidget, QTabWidget, QVBoxLayout, QMenuBar, QMenu, QFileDialog, QMessageBox, QDateTimeEdit, QHBoxLayout, QGroupBox, QComboBox
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QPushButton
@@ -8,12 +11,12 @@ matplotlib.use('Qt5Agg')  # Use the Qt5Agg backend for matplotlib
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT
 from PySide6.QtWidgets import QVBoxLayout
 
-import os
-from SamplerData import SamplerData
-from PlotData import PlotData
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QListWidget, QListWidgetItem
 from PySide6.QtWidgets import QGridLayout, QTextEdit, QLabel
+
+from SamplerData import SamplerData
+from PlotData import PlotData
 
 # constants
 DMJD = "DMJD"
@@ -117,16 +120,31 @@ def run_app():
                 return
             # x = data[:, 0]
             # y = data[:, 1]
+            # extract the data and apply expressions
             x = data[:, 0]
-            ys = [data[:, i] for i in range(1, num_y_cols+1)]
-            ys2 = [data[:, i] for i in range(num_y_cols+1, num_y_cols+1 + num_y2_cols)]
+            apply_expr = window.x_expr.toPlainText().replace('x', 'data')
+            x = sampler.apply_expression_to_data(x, apply_expr)
+            # x_expr = apply_expr.remove('data')
+
+            ys = np.array([data[:, i] for i in range(1, num_y_cols+1)])
+            print("ys:", ys)
+            apply_expr = window.y_expr.toPlainText().replace('y', 'data')
+            print("apply_expr:", apply_expr)
+            ys = sampler.apply_expression_to_data(ys, apply_expr)
+            print("ys:", ys)
+            y_expr = apply_expr.replace('data', '')
+
+            ys2 = np.array([data[:, i] for i in range(num_y_cols+1, num_y_cols+1 + num_y2_cols)])
+            apply_expr = window.y2_expr.toPlainText().replace('y2', 'data')
+            ys2 = sampler.apply_expression_to_data(ys2, apply_expr)
             print("ys2:", ys2)
+            y2_expr = apply_expr.replace('data', '')
 
             y_col = y_cols
         except Exception as e:
             QMessageBox.critical(window, 'Plot Error', f'Error retrieving data: {e}')
             return
-        plot_data = PlotData(x, ys, x_col, y_cols, sampler.sampler_name, y2_list=ys2, y2_cols=y2_cols, date_plot=x_col == DMJD)
+        plot_data = PlotData(x, ys, x_col, y_cols, y_expr, sampler.sampler_name, y2_list=ys2, y2_cols=y2_cols, y2_expr=y2_expr, date_plot=x_col == DMJD)
         fig, ax = plot_data.plot_data()
         # Remove previous plot if exists
         if hasattr(window, 'canvas'):

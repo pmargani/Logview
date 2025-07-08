@@ -68,5 +68,18 @@ class TestSamplerData(unittest.TestCase):
         self.assertEqual(data.shape[1], 3)
         self.assertTrue(np.all(data[:, 0] >= 60000.0))
 
+    def test_apply_expression_to_data(self):
+        arr = np.array([1, 2, 3])
+        # Test a simple multiplication
+        result = self.sampler.apply_expression_to_data(arr, 'data * 2')
+        print("Result of multiplication:", result)
+        np.testing.assert_array_equal(result, arr * 2)
+        # Test with numpy function
+        result = self.sampler.apply_expression_to_data(arr, 'np.sqrt(data)')
+        np.testing.assert_array_equal(result, np.sqrt(arr))
+        # Test with invalid expression (should return original data)
+        result = self.sampler.apply_expression_to_data(arr, 'data + unknown_var')
+        np.testing.assert_array_equal(result, arr)
+
 if __name__ == '__main__':
     unittest.main()
