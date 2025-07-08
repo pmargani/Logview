@@ -17,6 +17,8 @@ from PySide6.QtWidgets import QGridLayout, QTextEdit, QLabel
 
 from SamplerData import SamplerData
 from PlotData import PlotData
+from PySide6.QtCore import Qt
+from datetime import timedelta
 
 # constants
 DMJD = "DMJD"
@@ -118,8 +120,8 @@ def run_app():
         start_dt = start_picker.dateTime().toPython()
         end_dt = end_picker.dateTime().toPython()
         # testing:
-        start_dt = datetime(2025, 7, 7, 0, 0, 0)
-        end_dt = datetime(2025, 7, 8, 0, 0, 0)
+        # start_dt = datetime(2025, 7, 7, 0, 0, 0)
+        # end_dt = datetime(2025, 7, 8, 0, 0, 0)
         print('Start:', start_dt, 'End:', end_dt)
         if start_dt > end_dt:
             QMessageBox.critical(window, 'Date Error', 'Start date must be before or equal to end date.')
@@ -212,19 +214,151 @@ def run_app():
     selection_tab = QWidget()
     selection_layout = QVBoxLayout(selection_tab)
 
-    # Time range panel
-    time_range_panel = QGroupBox('time range')
-    time_range_layout = QHBoxLayout()
+    # Time range panel with "For" and "or directly:" labels above the pickers
+    time_range_panel = QGroupBox("Time Range")
+    time_range_layout = QVBoxLayout()
+
+    # Add label above quick range buttons
+    using_most_recent_label = QLabel("Using most recent period:")
+    time_range_layout.addWidget(using_most_recent_label)
+    # Add quick range buttons above "or by relative time"
+    quick_range_layout = QHBoxLayout()
+    window.last_hour_btn = QPushButton("Last Hour")
+    window.last_day_btn = QPushButton("Last Day")
+    window.last_week_btn = QPushButton("Last Week")
+    window.last_month_btn = QPushButton("Last Month")
+    quick_range_layout.addWidget(window.last_hour_btn)
+    quick_range_layout.addWidget(window.last_day_btn)
+    quick_range_layout.addWidget(window.last_week_btn)
+    quick_range_layout.addWidget(window.last_month_btn)
+    time_range_layout.addLayout(quick_range_layout)
+
+    def set_quick_range(hours):
+        """Set the start and end pickers to a quick range."""
+        now = datetime.utcnow()
+        start = now - timedelta(hours=hours)
+        start_picker.setDateTime(start)
+        end_picker.setDateTime(now)
+        # update the other widgets too
+        window.for_text.setText("1")
+        
+        choices = {
+            1: 'hour(s)',
+            24: 'day(s)',
+            24 * 7: 'week(s)',
+            24 * 30: 'month(s)'
+        }
+        window.interval_dropdown.setCurrentText(choices.get(hours, 'day(s)'))   
+        window.direction_dropdown.setCurrentText('before')  # Default to 'before' for quick ranges
+        window.for_picker.setDateTime(datetime.now())
+
+    def on_interval_changed():
+        now = datetime.utcnow()
+        try:
+            value = int(window.for_text.toPlainText())
+        except ValueError:
+            value = 1
+        interval = window.interval_dropdown.currentText()
+        if interval == "hour(s)":
+            delta = timedelta(hours=value)
+        elif interval == "day(s)":
+            delta = timedelta(days=value)
+        elif interval == "week(s)":
+            delta = timedelta(weeks=value)
+        elif interval == "month(s)":
+            delta = timedelta(days=30 * value)
+        else:
+            delta = timedelta(days=value)
+        direction = window.direction_dropdown.currentText()
+        ref_time = window.for_picker.dateTime().toPython()
+        if direction == 'before':
+            start = ref_time - delta
+            end = ref_time
+        elif direction == 'after':
+            start = ref_time
+            end = ref_time + delta
+        elif direction == 'around':
+            half = delta / 2
+            start = ref_time - half
+            end = ref_time + half
+        else:
+            start = ref_time - delta
+            end = ref_time
+        start_picker.setDateTime(start)
+        end_picker.setDateTime(end)
+
+    window.last_hour_btn.clicked.connect(lambda: set_quick_range(1))
+    window.last_day_btn.clicked.connect(lambda: set_quick_range(24))
+    window.last_week_btn.clicked.connect(lambda: set_quick_range(24 * 7))
+    window.last_month_btn.clicked.connect(lambda: set_quick_range(24 * 30))
+    # "or by relative time" label above the for_row
+    or_by_relative_label = QLabel("or by relative time")
+    time_range_layout.addWidget(or_by_relative_label)
+    # "For" label with text widget to the right
+
+    class NumberOnlyTextEdit(QTextEdit):
+        def keyPressEvent(self, event):
+            if event.text().isdigit() or event.key() in (Qt.Key_Backspace, Qt.Key_Delete, Qt.Key_Left, Qt.Key_Right, Qt.Key_Tab, Qt.Key_Enter, Qt.Key_Return):
+                super().keyPressEvent(event)
+            else:
+                event.ignore()
+
+    for_row_layout = QHBoxLayout()
+    for_label = QLabel("For")
+    for_row_layout.addWidget(for_label)
+    window.for_text = NumberOnlyTextEdit()
+    window.for_text.setFixedHeight(window.for_text.fontMetrics().height() + 12)
+    window.for_text.setFixedWidth(120)
+    window.for_text.setText('1')
+    window.for_text.textChanged.connect(on_interval_changed)
+    for_row_layout.addWidget(window.for_text)
+
+    # Add interval dropdown
+    window.interval_dropdown = QComboBox()
+    window.interval_dropdown.addItems(["hour(s)", "day(s)", "week(s)", "month(s)"])
+
+
+    window.interval_dropdown.currentIndexChanged.connect(on_interval_changed)
+    for_row_layout.addWidget(window.interval_dropdown)
+
+    # Add direction dropdown after interval_dropdown
+    window.direction_dropdown = QComboBox()
+    window.direction_dropdown.addItems(['before', 'around', 'after'])
+    window.direction_dropdown.currentIndexChanged.connect(on_interval_changed)
+
+    for_row_layout.addWidget(window.direction_dropdown)
+
+    # Add QDateTimeEdit widget called for_picker after direction_dropdown
+    window.for_picker = QDateTimeEdit()
+    window.for_picker.setObjectName('for_picker')
+    window.for_picker.setDisplayFormat('yyyy-MM-dd HH:mm:ss')
+    window.for_picker.setDateTime(datetime.utcnow())
+    window.for_picker.dateTimeChanged.connect(on_interval_changed)
+    for_row_layout.addWidget(window.for_picker)
+
+    time_range_layout.addLayout(for_row_layout)
+
+    # "or directly:" label
+    or_directly_label = QLabel("or directly:")
+    time_range_layout.addWidget(or_directly_label)
+
+    # Horizontal layout for the pickers
+    pickers_layout = QHBoxLayout()
     start_picker = QDateTimeEdit()
     start_picker.setObjectName('start')
     start_picker.setDisplayFormat('yyyy-MM-dd HH:mm:ss')
+    start_picker.setDateTime(datetime.utcnow() - timedelta(hours=1))
     end_picker = QDateTimeEdit()
     end_picker.setObjectName('end')
     end_picker.setDisplayFormat('yyyy-MM-dd HH:mm:ss')
-    time_range_layout.addWidget(QLabel('Start:'))
-    time_range_layout.addWidget(start_picker)
-    time_range_layout.addWidget(QLabel('End:'))
-    time_range_layout.addWidget(end_picker)
+    end_picker.setDateTime(datetime.utcnow())
+    pickers_layout.addWidget(QLabel('From'))
+    pickers_layout.addWidget(start_picker)
+    pickers_layout.addWidget(QLabel('To'))
+    pickers_layout.addWidget(end_picker)
+    pickers_layout.addWidget(QLabel('UTC'))
+
+    time_range_layout.addLayout(pickers_layout)
     time_range_panel.setLayout(time_range_layout)
 
     # Create a horizontal panel to hold fit_columns_panel (left) and a right panel (right)
