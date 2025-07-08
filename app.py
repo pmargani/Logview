@@ -53,12 +53,22 @@ def run_app():
     window.plot_button = QPushButton('Plot')
     window.plot_button.setEnabled(False)
 
+    # TBF: aliases should be loaded from sparrow.conf
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    aliases = {
+        "Weather-Weather2-weather2": os.path.join(base_dir, 'Weather-Weather2-weather2'),
+        "does not exist": None,
+    }
+
     def open_folder():
         dir_path = QFileDialog.getExistingDirectory(window, 'Select Folder')
         if not dir_path:
             window.plot_button.setEnabled(False)
             window._sampler = None
             return
+        loadSampler(dir_path)
+
+    def loadSampler(dir_path):    
         sampler = SamplerData(dir_path)
         youngest_file = sampler.find_youngest_fits()
         if not youngest_file:
@@ -198,14 +208,17 @@ def run_app():
     time_range_layout.addWidget(end_picker)
     time_range_panel.setLayout(time_range_layout)
 
-    # Fit columns panel
+    # Create a horizontal panel to hold fit_columns_panel (left) and a right panel (right)
+    columns_and_right_panel = QGroupBox()
+    columns_and_right_layout = QHBoxLayout()
+
+    # Fit columns panel (left)
     fit_columns_panel = QGroupBox('fit columns')
     fit_columns_layout = QVBoxLayout()
     window.x_dropdown = QComboBox()
     window.x_dropdown.setObjectName('x')
 
     # Use QListWidget for multi-selection of y and y2
-
     window.y_list = QListWidget()
     window.y_list.setObjectName('y')
     window.y_list.setSelectionMode(QListWidget.MultiSelection)
@@ -217,22 +230,15 @@ def run_app():
     window.x_expr = QTextEdit()
     window.x_expr.setText('x+0')
     window.x_expr.setFixedHeight(window.x_expr.fontMetrics().height() + 12)
-    # window.x_expr.setVerticalScrollBarPolicy(False)
-    # window.x_expr.setHorizontalScrollBarPolicy(False)
 
     window.y_expr = QTextEdit()
     window.y_expr.setText('y*1')
     window.y_expr.setFixedHeight(window.y_expr.fontMetrics().height() + 12)
-    # window.y_expr.setVerticalScrollBarPolicy(False)
-    # window.y_expr.setHorizontalScrollBarPolicy(False)
 
     window.y2_expr = QTextEdit()
     window.y2_expr.setText('y2*1')
     window.y2_expr.setFixedHeight(window.y2_expr.fontMetrics().height() + 12)
-    # window.y2_expr.setVerticalScrollBarPolicy(False)
-    # window.y2_expr.setHorizontalScrollBarPolicy(False)
-    
-    
+
     grid_layout = QGridLayout()
     grid_layout.addWidget(QLabel('Axis:'), 0, 0)
     grid_layout.addWidget(QLabel('Column:'), 0, 1)
@@ -252,13 +258,55 @@ def run_app():
 
     fit_columns_panel.setLayout(grid_layout)
 
+    # Right hand side panel
+    right_panel = QGroupBox('Aliases')
+    right_panel_layout = QVBoxLayout()
+
+    # QListWidget allowing only one selection
+    window.alias_list = QListWidget()
+    window.alias_list.setSelectionMode(QListWidget.SingleSelection)
+    window.alias_list.addItems(aliases.keys())
+    right_panel_layout.addWidget(window.alias_list)
+
+
+
+    # "Load" button
+    window.load_button = QPushButton('Load')
+    right_panel_layout.addWidget(window.load_button)
+    window.load_button.setEnabled(False)
+    # don't enable the load button until an alias is selected
+    def on_alias_selection_changed():
+        selected = window.alias_list.selectedItems()
+        window.load_button.setEnabled(bool(selected))
+    window.alias_list.itemSelectionChanged.connect(on_alias_selection_changed)
+    def on_load_button_clicked():
+        selected_items = window.alias_list.selectedItems()
+        if not selected_items:
+            QMessageBox.warning(window, 'No Alias Selected', 'Please select an alias to load.')
+            return
+        alias = selected_items[0].text()
+        dir_path = aliases.get(alias)
+        if not dir_path or not os.path.isdir(dir_path):
+            QMessageBox.critical(window, 'Invalid Directory', f'The directory {dir_path} for alias "{alias}" does not exist.')
+            return
+        loadSampler(dir_path)
+
+    window.load_button.clicked.connect(on_load_button_clicked)
+    right_panel.setLayout(right_panel_layout)
+
+    # Add panels to the horizontal layout
+    columns_and_right_layout.addWidget(fit_columns_panel)
+    columns_and_right_layout.addWidget(right_panel)
+    columns_and_right_panel.setLayout(columns_and_right_layout)
+
     buttons_panel = QGroupBox('buttons')
     buttons_layout = QHBoxLayout()
     buttons_layout.addWidget(window.plot_button)
     buttons_panel.setLayout(buttons_layout)
 
+    # Add the new columns_and_right_panel to the selection layout
     selection_layout.addWidget(time_range_panel)
-    selection_layout.addWidget(fit_columns_panel)
+    selection_layout.addWidget(columns_and_right_panel)
     selection_layout.addWidget(buttons_panel)
     selection_tab.setLayout(selection_layout)
 
