@@ -1,12 +1,14 @@
 # import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from astropy.time import Time
+import itertools
+from matplotlib import cm
 
 class PlotData:
     """
     Container for x and y data to be plotted.
     """
-    def __init__(self, x, y_list, x_col, y_cols, sampler_name, date_plot=False):
+    def __init__(self, x, y_list, x_col, y_cols, sampler_name, y2_list=None, y2_cols=None, date_plot=False):
         self.x = x
         self.y_list = y_list  # list of y arrays
         self.x_col = x_col
@@ -14,23 +16,57 @@ class PlotData:
         self.date_plot = date_plot
         self.sampler_name = sampler_name
 
+        self.y2_list = y2_list if y2_list is not None else []  # list of second y arrays
+        self.y2_cols = y2_cols if y2_cols is not None else []   # list of second y column names
+
     def __repr__(self):
         return f"PlotData(x={self.x}, y_list={self.y_list})"
     
 
     def plot_data(self):
+
         fig = Figure(figsize=(4, 3))
         ax = fig.add_subplot(111)
+        ax2 = None
+
+        # Generate distinct colors for all plots
+        num_plots = len(self.y_list) + (len(self.y2_list) if self.y2_list else 0)
+        color_map = cm.get_cmap('tab10' if num_plots <= 10 else 'tab20', num_plots)
+        color_iter = iter(color_map.colors)
+
         if self.date_plot:
             x_mjd = Time(self.x, format='mjd').datetime
             for y, y_col in zip(self.y_list, self.y_cols):
-                ax.plot_date(x_mjd, y, '-', label=y_col)
+                color = next(color_iter)
+                print("plot_date for y_col", y_col)
+                ax.plot_date(x_mjd, y, '-', label=y_col, color=color)
             ax.set_xlabel(x_mjd[0].strftime('%Y-%m-%d %H:%M:%S'))
         else:
             ax.set_xlabel(self.x_col)
             for y, y_col in zip(self.y_list, self.y_cols):
-                ax.plot(self.x, y, label=y_col)
-        ax.set_title(self.sampler_name)
+                color = next(color_iter)
+                ax.plot(self.x, y, label=y_col, color=color)
         ax.set_ylabel(', '.join(self.y_cols))
-        ax.legend()
-        return fig, ax
+
+        # Plot y2_list on a secondary y-axis if present
+        if self.y2_list and self.y2_cols:
+            ax2 = ax.twinx()
+            if self.date_plot:
+                for y2, y2_col in zip(self.y2_list, self.y2_cols):
+                    color = next(color_iter)
+                    print("plot_date for y2_col", y2_col)
+                    ax2.plot_date(x_mjd, y2, '--', label=y2_col, color=color)
+            else:
+                for y2, y2_col in zip(self.y2_list, self.y2_cols):
+                    color = next(color_iter)
+                    ax2.plot(self.x, y2, '--', label=y2_col, color=color)
+            ax2.set_ylabel(', '.join(self.y2_cols))
+            # Combine legends from both axes
+            lines, labels = ax.get_legend_handles_labels()
+            lines2, labels2 = ax2.get_legend_handles_labels()
+            ax2.legend(lines + lines2, labels + labels2)
+        else:
+            ax.legend()
+
+        ax.set_title(self.sampler_name)
+        return fig, ax2 if ax2 else ax

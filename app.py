@@ -75,6 +75,8 @@ def run_app():
         for col in colnames:
             item = QListWidgetItem(col)
             window.y_list.addItem(item)
+            item = QListWidgetItem(col)
+            window.y2_list.addItem(item)
         window.plot_button.setEnabled(True)
         window._sampler = sampler
         # QMessageBox.information(window, 'FITS Columns', f'Columns in second table of {os.path.basename(youngest_file)}:\n' + ', '.join(colnames))
@@ -99,11 +101,15 @@ def run_app():
         if not y_selected_items:
             QMessageBox.critical(window, 'Selection Error', 'Please select at least one y column.')
             return
+        y2_selected_items = window.y2_list.selectedItems()
         y_cols = [item.text() for item in y_selected_items]
+        y2_cols = [item.text() for item in y2_selected_items]
         # For now, only use the first selected y column for compatibility with get_data
         # y_col = y_cols[0]
         try:
-            cols = [x_col] + y_cols
+            num_y_cols = len(y_cols)
+            num_y2_cols = len(y2_cols)
+            cols = [x_col] + y_cols + y2_cols
             data = sampler.get_data(cols, (start_dt, end_dt))
             print('Data.shape:', data.shape)
             if data.shape[1] < 2:
@@ -112,12 +118,15 @@ def run_app():
             # x = data[:, 0]
             # y = data[:, 1]
             x = data[:, 0]
-            ys = [data[:, i] for i in range(1, data.shape[1])]
+            ys = [data[:, i] for i in range(1, num_y_cols+1)]
+            ys2 = [data[:, i] for i in range(num_y_cols+1, num_y_cols+1 + num_y2_cols)]
+            print("ys2:", ys2)
+
             y_col = y_cols
         except Exception as e:
             QMessageBox.critical(window, 'Plot Error', f'Error retrieving data: {e}')
             return
-        plot_data = PlotData(x, ys, x_col, y_cols, sampler.sampler_name, date_plot=x_col == DMJD)
+        plot_data = PlotData(x, ys, x_col, y_cols, sampler.sampler_name, y2_list=ys2, y2_cols=y2_cols, date_plot=x_col == DMJD)
         fig, ax = plot_data.plot_data()
         # Remove previous plot if exists
         if hasattr(window, 'canvas'):
