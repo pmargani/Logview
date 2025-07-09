@@ -144,13 +144,23 @@ def run_app():
             num_y_cols = len(y_cols)
             num_y2_cols = len(y2_cols)
             cols = [x_col] + y_cols + y2_cols
-            data = sampler.get_data(cols, (start_dt, end_dt))
+            def show_file_status(file_path, nfile, num_files):
+                window.status_left.setText(f"Opening: {os.path.basename(file_path)}")
+                window.status_center.setText(f"{nfile+1}/{num_files}")
+                progress = int((nfile + 1) / num_files * 100) if num_files > 0 else 0
+                window.status_progress.setValue(progress)
+                QApplication.processEvents()  # Ensure UI updates immediately
+            data = sampler.get_data(cols, (start_dt, end_dt), pre_open_hook=show_file_status)
             print('Data.shape:', data.shape)
             if data.shape[1] < 2:
                 QMessageBox.critical(window, 'Data Error', 'Data does not have enough columns for x and y.')
                 return
-            # x = data[:, 0]
-            # y = data[:, 1]
+            # update status bar again
+            window.status_left.setText("Plotting Data")
+            window.status_center.setText("")
+            window.status_progress.setValue(0)
+            QApplication.processEvents()
+
             # extract the data and apply expressions
             x = data[:, 0]
             apply_expr = window.x_expr.toPlainText().replace('x', 'data')
@@ -175,6 +185,7 @@ def run_app():
         except Exception as e:
             QMessageBox.critical(window, 'Plot Error', f'Error retrieving data: {e}')
             return
+
         plot_data = PlotData(x, ys, x_col, y_cols, y_expr, sampler.sampler_name, window._col_units, y2_list=ys2, y2_cols=y2_cols, y2_expr=y2_expr, date_plot=x_col == DMJD)
         fig, ax = plot_data.plot_data()
         # Remove previous plot if exists
@@ -213,6 +224,32 @@ def run_app():
     tab_widget = QTabWidget(window)
     selection_tab = QWidget()
     selection_layout = QVBoxLayout(selection_tab)
+    # Status bar for the selection tab (split into three parts)
+    from PySide6.QtWidgets import QStatusBar, QLabel
+
+    window.status_bar = QStatusBar()
+    window.status_left = QLabel('Ready')
+    window.status_center = QLabel('')
+    from PySide6.QtWidgets import QProgressBar, QHBoxLayout
+    window.status_progress = QProgressBar()
+    window.status_progress.setMinimum(0)
+    window.status_progress.setMaximum(100)
+    window.status_progress.setValue(0)
+    window.status_progress.setTextVisible(True)
+    outline_style = "border: 1px solid #444; padding: 2px; border-radius: 3px;"
+    window.status_left.setStyleSheet(outline_style)
+    window.status_center.setStyleSheet(outline_style)
+    window.status_progress.setStyleSheet(outline_style)
+    window.status_bar.setStyleSheet("QStatusBar { border: 1px solid #222; }")
+    status_container = QWidget()
+    status_layout = QHBoxLayout()
+    status_layout.setContentsMargins(0, 0, 0, 0)
+    status_layout.setSpacing(0)
+    status_layout.addWidget(window.status_left, stretch=70)
+    status_layout.addWidget(window.status_center, stretch=15)
+    status_layout.addWidget(window.status_progress, stretch=15)
+    status_container.setLayout(status_layout)
+    window.status_bar.addPermanentWidget(status_container, 1)
 
     # Time range panel with "For" and "or directly:" labels above the pickers
     time_range_panel = QGroupBox("Time Range")
@@ -432,6 +469,7 @@ def run_app():
         selected = window.alias_list.selectedItems()
         window.load_button.setEnabled(bool(selected))
     window.alias_list.itemSelectionChanged.connect(on_alias_selection_changed)
+
     def on_load_button_clicked():
         selected_items = window.alias_list.selectedItems()
         if not selected_items:
@@ -461,6 +499,7 @@ def run_app():
     selection_layout.addWidget(time_range_panel)
     selection_layout.addWidget(columns_and_right_panel)
     selection_layout.addWidget(buttons_panel)
+    selection_layout.addWidget(window.status_bar)
     selection_tab.setLayout(selection_layout)
 
     graph_tab = QWidget()

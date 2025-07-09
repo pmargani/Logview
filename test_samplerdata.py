@@ -60,10 +60,12 @@ class TestSamplerData(unittest.TestCase):
         self.assertTrue(any(f.endswith('.fits') for f in files))
 
     def test_get_data(self):
+        def print_it(filename, n, m):
+            print(f"Opening file: {filename} ({n}/{m})")
         start = datetime(2025, 7, 7, 0, 0, 0)
         end = datetime(2025, 7, 8, 0, 0, 0)
         columns = ['DMJD', 'A', 'B']
-        data = self.sampler.get_data(columns, (start, end))
+        data = self.sampler.get_data(columns, (start, end), pre_open_hook=print_it)
         print(data)
         self.assertEqual(data.shape[1], 3)
         self.assertTrue(np.all(data[:, 0] >= 60000.0))

@@ -155,7 +155,7 @@ class SamplerData:
 
 
 
-    def get_data(self, columns, timestamp_range):
+    def get_data(self, columns, timestamp_range, pre_open_hook=None):
         """
         Extracts data for specified columns within a given timestamp range from the second table of all FITS files
         in the specified timestamp range.
@@ -175,8 +175,10 @@ class SamplerData:
         files_in_range = self.get_fits_files_from_names(start, end)
         print('Files in range:', files_in_range)
         result = []
-        for file_path in files_in_range:
+        for ifile, file_path in enumerate(files_in_range):
             try:
+                if pre_open_hook is not None:
+                    pre_open_hook(file_path, ifile, len(files_in_range))
                 with fits.open(file_path) as hdul:
                     if len(hdul) < 2 or not hasattr(hdul[1], 'data'):
                         print(f"Skipping {file_path}: no second table HDU or data.")
