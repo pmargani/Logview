@@ -41,14 +41,28 @@ def run_app():
     window.setWindowTitle('GBT LogView')
     # window.setGeometry(100, 100, 400, 300)
     window.setGeometry(left, top, width, height)
-
     # Menu bar
     menubar = QMenuBar(window)
     file_menu = QMenu('File', menubar)
     open_action = QAction('Open...', menubar)
     file_menu.addAction(open_action)
+
+    # Exit action
+    exit_action = QAction('Exit', menubar)
+    exit_action.triggered.connect(app.quit)
+    file_menu.addAction(exit_action)
+
     menubar.addMenu(file_menu)
     menubar.setNativeMenuBar(False)
+
+    # Help menu
+    help_menu = QMenu('Help', menubar)
+    help_action = QAction('Help', menubar)
+    def show_help_dialog():
+        QMessageBox.information(window, 'Help', 'Please contact Customer Support')
+    help_action.triggered.connect(show_help_dialog)
+    help_menu.addAction(help_action)
+    menubar.addMenu(help_menu)
 
     # Create plot_button before open_folder is defined so it exists on window
 
