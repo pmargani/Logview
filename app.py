@@ -20,6 +20,7 @@ from PySide6.QtCore import Qt
 from SamplerData import SamplerData
 from PlotData import PlotData
 from TimeRangePanel import TimeRangePanel
+from DataSelectionPanel import DataSelectionPanel
 
 # constants
 DMJD = "DMJD"
@@ -103,23 +104,22 @@ def run_app():
             window._sampler = None
             return
         
+
         # use these to populate the dropdown and list widgets
-        window.x_dropdown.clear()
-        window.y_list.clear()
+        data_selection_panel.x_dropdown.clear()
+        data_selection_panel.y_list.clear()
         for i, col in enumerate(colnames):
-            # For example, display "Column: <col>" but return <col>
             display_text = f"{col} ({colunits[i]})" if colunits and i < len(colunits) else f"Column: {col}"
-            window.x_dropdown.addItem(display_text, userData=col)
-        window.x_dropdown.addItems(colnames)
+            data_selection_panel.x_dropdown.addItem(display_text, userData=col)
+        data_selection_panel.x_dropdown.addItems(colnames)
         for col in colnames:
             display_text = f"{col} ({col_map[col]})"
-            
             item = QListWidgetItem(display_text)
-            item.setData(0x0100, col)  # Qt.UserRole = 0x0100
-            window.y_list.addItem(item)
+            item.setData(0x0100, col)
+            data_selection_panel.y_list.addItem(item)
             item2 = QListWidgetItem(display_text)
             item2.setData(0x0100, col)
-            window.y2_list.addItem(item2)
+            data_selection_panel.y2_list.addItem(item2)
 
         # finally we can enable the plot button    
         window.plot_button.setEnabled(True)
@@ -142,16 +142,16 @@ def run_app():
             QMessageBox.critical(window, 'Date Error', 'Start date must be before or equal to end date.')
             return
 
-        x_col = window.x_dropdown.currentData()
+        x_col = data_selection_panel.x_dropdown.currentData()
         print('Selected x column:', x_col)
-        y_selected_items = window.y_list.selectedItems()
+        y_selected_items = data_selection_panel.y_list.selectedItems()
         if not y_selected_items:
             QMessageBox.critical(window, 'Selection Error', 'Please select at least one y column.')
-            return       # Use the data (Qt.UserRole) instead of the displayed text
+            return
         y_cols = [item.data(0x0100) for item in y_selected_items]
         print('Selected y columns:', y_cols)
- 
-        y2_selected_items = window.y2_list.selectedItems()
+
+        y2_selected_items = data_selection_panel.y2_list.selectedItems()
         y2_cols = [item.data(0x0100) for item in y2_selected_items]
         # For now, only use the first selected y column for compatibility with get_data
         # y_col = y_cols[0]
@@ -178,20 +178,19 @@ def run_app():
 
             # extract the data and apply expressions
             x = data[:, 0]
-            apply_expr = window.x_expr.toPlainText().replace('x', 'data')
+            apply_expr = data_selection_panel.x_expr.toPlainText().replace('x', 'data')
             x = sampler.apply_expression_to_data(x, apply_expr)
-            # x_expr = apply_expr.remove('data')
 
             ys = np.array([data[:, i] for i in range(1, num_y_cols+1)])
             print("ys:", ys)
-            apply_expr = window.y_expr.toPlainText().replace('y', 'data')
+            apply_expr = data_selection_panel.y_expr.toPlainText().replace('y', 'data')
             print("apply_expr:", apply_expr)
             ys = sampler.apply_expression_to_data(ys, apply_expr)
             print("ys:", ys)
             y_expr = apply_expr.replace('data', '')
 
             ys2 = np.array([data[:, i] for i in range(num_y_cols+1, num_y_cols+1 + num_y2_cols)])
-            apply_expr = window.y2_expr.toPlainText().replace('y2', 'data')
+            apply_expr = data_selection_panel.y2_expr.toPlainText().replace('y2', 'data')
             ys2 = sampler.apply_expression_to_data(ys2, apply_expr)
             print("ys2:", ys2)
             y2_expr = apply_expr.replace('data', '')
@@ -266,113 +265,20 @@ def run_app():
     status_container.setLayout(status_layout)
     window.status_bar.addPermanentWidget(status_container, 1)
 
-
-
-
-
-    # Instantiate and add the panel
+    # Instantiate and add the panel for selecting the time range
     time_range_panel = TimeRangePanel(window)
 
-    # Create a horizontal panel to hold fit_columns_panel (left) and a right panel (right)
-    columns_and_right_panel = QGroupBox()
-    columns_and_right_layout = QHBoxLayout()
-
-    # Fit columns panel (left)
-    fit_columns_panel = QGroupBox('fit columns')
-    fit_columns_layout = QVBoxLayout()
-    window.x_dropdown = QComboBox()
-    window.x_dropdown.setObjectName('x')
-
-    # Use QListWidget for multi-selection of y and y2
-    window.y_list = QListWidget()
-    window.y_list.setObjectName('y')
-    window.y_list.setSelectionMode(QListWidget.MultiSelection)
-
-    window.y2_list = QListWidget()
-    window.y2_list.setObjectName('y2')
-    window.y2_list.setSelectionMode(QListWidget.MultiSelection)
-
-    window.x_expr = QTextEdit()
-    window.x_expr.setText('x+0')
-    window.x_expr.setFixedHeight(window.x_expr.fontMetrics().height() + 12)
-
-    window.y_expr = QTextEdit()
-    window.y_expr.setText('y*1')
-    window.y_expr.setFixedHeight(window.y_expr.fontMetrics().height() + 12)
-
-    window.y2_expr = QTextEdit()
-    window.y2_expr.setText('y2*1')
-    window.y2_expr.setFixedHeight(window.y2_expr.fontMetrics().height() + 12)
-
-    grid_layout = QGridLayout()
-    grid_layout.addWidget(QLabel('Axis:'), 0, 0)
-    grid_layout.addWidget(QLabel('Column:'), 0, 1)
-    grid_layout.addWidget(QLabel('Exprresion:'), 0, 2)
-
-    grid_layout.addWidget(QLabel('x:'), 1, 0)
-    grid_layout.addWidget(window.x_dropdown, 1, 1)
-    grid_layout.addWidget(window.x_expr, 1, 2)
-
-    grid_layout.addWidget(QLabel('y:'), 2, 0)
-    grid_layout.addWidget(window.y_list, 2, 1)
-    grid_layout.addWidget(window.y_expr, 2, 2)
-
-    grid_layout.addWidget(QLabel('y2:'), 3, 0)
-    grid_layout.addWidget(window.y2_list, 3, 1)
-    grid_layout.addWidget(window.y2_expr, 3, 2)
-
-    fit_columns_panel.setLayout(grid_layout)
-
-    # Right hand side panel
-    right_panel = QGroupBox('Aliases')
-    right_panel_layout = QVBoxLayout()
-
-    # QListWidget allowing only one selection
-    window.alias_list = QListWidget()
-    window.alias_list.setSelectionMode(QListWidget.SingleSelection)
-    window.alias_list.addItems(aliases.keys())
-    right_panel_layout.addWidget(window.alias_list)
-
-
-
-    # "Load" button
-    window.load_button = QPushButton('Load')
-    right_panel_layout.addWidget(window.load_button)
-    window.load_button.setEnabled(False)
-    # don't enable the load button until an alias is selected
-    def on_alias_selection_changed():
-        selected = window.alias_list.selectedItems()
-        window.load_button.setEnabled(bool(selected))
-    window.alias_list.itemSelectionChanged.connect(on_alias_selection_changed)
-
-    def on_load_button_clicked():
-        selected_items = window.alias_list.selectedItems()
-        if not selected_items:
-            QMessageBox.warning(window, 'No Alias Selected', 'Please select an alias to load.')
-            return
-        alias = selected_items[0].text()
-        dir_path = aliases.get(alias)
-        if not dir_path or not os.path.isdir(dir_path):
-            QMessageBox.critical(window, 'Invalid Directory', f'The directory {dir_path} for alias "{alias}" does not exist.')
-            return
-        loadSampler(dir_path)
-
-    window.load_button.clicked.connect(on_load_button_clicked)
-    right_panel.setLayout(right_panel_layout)
-
-    # Add panels to the horizontal layout
-    columns_and_right_layout.addWidget(fit_columns_panel)
-    columns_and_right_layout.addWidget(right_panel)
-    columns_and_right_panel.setLayout(columns_and_right_layout)
+    # Instantiate and add the panel for selecting the data
+    data_selection_panel = DataSelectionPanel(aliases, loadSampler, window)
 
     buttons_panel = QGroupBox('buttons')
     buttons_layout = QHBoxLayout()
     buttons_layout.addWidget(window.plot_button)
     buttons_panel.setLayout(buttons_layout)
 
-    # Add the new columns_and_right_panel to the selection layout
+    # Add the new panels to the selection layout
     selection_layout.addWidget(time_range_panel)
-    selection_layout.addWidget(columns_and_right_panel)
+    selection_layout.addWidget(data_selection_panel)
     selection_layout.addWidget(buttons_panel)
     selection_layout.addWidget(window.status_bar)
     selection_tab.setLayout(selection_layout)
