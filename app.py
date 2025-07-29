@@ -4,7 +4,7 @@ from datetime import timedelta
 import os
 
 import numpy as np
-from PySide6.QtWidgets import QApplication, QLabel, QWidget, QTabWidget, QVBoxLayout, QMenuBar, QMenu, QFileDialog, QMessageBox, QDateTimeEdit, QHBoxLayout, QGroupBox, QComboBox
+from PySide6.QtWidgets import QApplication, QLabel, QWidget, QTabWidget, QVBoxLayout, QFileDialog, QMessageBox, QDateTimeEdit, QHBoxLayout, QGroupBox, QComboBox
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QPushButton
 import matplotlib
@@ -24,6 +24,7 @@ from PlotData import PlotData
 from TimeRangePanel import TimeRangePanel
 from DataSelectionPanel import DataSelectionPanel
 from StatusBarPanel import StatusBarPanel
+from MenuBar import MenuBar
 
 # constants
 DMJD = "DMJD"
@@ -46,28 +47,17 @@ def run_app():
     window.setWindowTitle('GBT LogView')
     # window.setGeometry(100, 100, 400, 300)
     window.setGeometry(left, top, width, height)
-    # Menu bar
-    menubar = QMenuBar(window)
-    file_menu = QMenu('File', menubar)
-    open_action = QAction('Open...', menubar)
-    file_menu.addAction(open_action)
 
-    # Exit action
-    exit_action = QAction('Exit', menubar)
-    exit_action.triggered.connect(app.quit)
-    file_menu.addAction(exit_action)
+    # Menu bar (encapsulated)
+    def open_folder():
+        dir_path = QFileDialog.getExistingDirectory(window, 'Select Folder')
+        if not dir_path:
+            window.plot_button.setEnabled(False)
+            window._sampler = None
+            return
+        loadSampler(dir_path)
 
-    menubar.addMenu(file_menu)
-    menubar.setNativeMenuBar(False)
-
-    # Help menu
-    help_menu = QMenu('Help', menubar)
-    help_action = QAction('Help', menubar)
-    def show_help_dialog():
-        QMessageBox.information(window, 'Help', 'Please contact Customer Support')
-    help_action.triggered.connect(show_help_dialog)
-    help_menu.addAction(help_action)
-    menubar.addMenu(help_menu)
+    menubar = MenuBar(window, app, open_folder)
 
     # Create plot_button before open_folder is defined so it exists on window
 
@@ -235,7 +225,6 @@ def run_app():
 
     # connect our buttons to actions
     window.plot_button.clicked.connect(on_plot_clicked)
-    open_action.triggered.connect(open_folder)
 
     # the tab holds our selection panel and graph tab
     tab_widget = QTabWidget(window)
