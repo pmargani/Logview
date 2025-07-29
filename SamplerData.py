@@ -13,7 +13,9 @@ class SamplerData:
         self.youngest_file = None
         self.colnames = []
         self.sampler_name = os.path.basename(os.path.normpath(self.directory))
-
+        if not os.path.isdir(self.directory):
+            raise Exception(f"Directory does not exist: {self.directory}")
+        
     def find_youngest_fits(self):
         fits_files = [f for f in os.listdir(self.directory) if f.lower().endswith('.fits')]
         if not fits_files:
