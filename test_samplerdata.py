@@ -120,32 +120,6 @@ class TestSamplerData(unittest.TestCase):
         with pytest.raises(Exception):
             SamplerData('invalid/path')
 
-    def test_get_fits_files_in_range(self):
-        # This test assumes the Weather-Weather2-weather2 directory exists and contains FITS files
-        sampler = SamplerData('Weather-Weather2-weather2')
-        start = datetime(2025, 7, 7, 0, 0, 0)
-        end = datetime(2025, 7, 8, 0, 0, 0)
-        fits_files = sampler.get_fits_files_in_range(start, end)
-        # Should return a list (possibly empty) of .fits files
-        self.assertIsInstance(fits_files, list)
-        for f in fits_files:
-            self.assertTrue(f.endswith('.fits'))
-        # If there are files, check that their datetimes are within the range
-        for f in fits_files:
-            dt = sampler.get_datetime_from_filename(os.path.basename(f))
-            self.assertGreaterEqual(dt, start)
-            self.assertLessEqual(dt, end)
-
-        # test out of range dates
-
-        start = datetime(2026, 7, 7, 0, 0, 0)
-        end = datetime(2026, 7, 8, 0, 0, 0)
-        fits_files = sampler.get_fits_files_in_range(start, end)
-        # Should return a list (possibly empty) of .fits files
-        self.assertIsInstance(fits_files, list)
-        print("Fits files in range:", fits_files)
-        # reveals actual bug!!!
-        self.assertEqual(len(fits_files), 0)
 
 if __name__ == '__main__':
     unittest.main()

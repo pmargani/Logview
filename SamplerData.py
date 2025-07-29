@@ -118,41 +118,6 @@ class SamplerData:
             files_in_range.insert(0, before_start)
         return files_in_range
     
-    def get_fits_files_in_range(self, start_datetime, end_datetime):
-        """
-        Returns a list of FITS files in the directory whose modification times fall within the given datetime range,
-        and also includes the file (if any) with the latest modification time before start_datetime.
-
-        Args:
-            start_datetime (datetime): Start of the datetime range.
-            end_datetime (datetime): End of the datetime range.
-
-        Returns:
-            list: List of FITS file paths within the datetime range, plus the file right before the range if it exists.
-        """
-
-        fits_files = [f for f in os.listdir(self.directory) if f.lower().endswith('.fits')]
-        fits_files_full = [os.path.join(self.directory, f) for f in fits_files]
-        files_in_range = []
-        before_start = None
-        before_start_mtime = None
-
-        for file_path in fits_files_full:
-            try:
-                mtime = os.path.getmtime(file_path)
-                file_datetime = datetime.fromtimestamp(mtime)
-                if start_datetime <= file_datetime <= end_datetime:
-                    files_in_range.append(file_path)
-                elif file_datetime < start_datetime:
-                    if before_start is None or mtime > before_start_mtime:
-                        before_start = file_path
-                        before_start_mtime = mtime
-            except Exception:
-                continue
-
-        if before_start:
-            files_in_range.insert(0, before_start)
-        return files_in_range
     
 
 
