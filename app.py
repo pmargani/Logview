@@ -16,11 +16,14 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QListWidget, QListWidgetItem
 from PySide6.QtWidgets import QGridLayout, QTextEdit, QLabel
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QStatusBar, QLabel
 
+# this modules imports
 from SamplerData import SamplerData
 from PlotData import PlotData
 from TimeRangePanel import TimeRangePanel
 from DataSelectionPanel import DataSelectionPanel
+from StatusBarPanel import StatusBarPanel
 
 # constants
 DMJD = "DMJD"
@@ -134,9 +137,6 @@ def run_app():
             return
         start_dt = time_range_panel.start_picker.dateTime().toPython()
         end_dt = time_range_panel.end_picker.dateTime().toPython()
-        # testing:
-        # start_dt = datetime(2025, 7, 7, 0, 0, 0)
-        # end_dt = datetime(2025, 7, 8, 0, 0, 0)
         print('Start:', start_dt, 'End:', end_dt)
         if start_dt > end_dt:
             QMessageBox.critical(window, 'Date Error', 'Start date must be before or equal to end date.')
@@ -160,10 +160,10 @@ def run_app():
             num_y2_cols = len(y2_cols)
             cols = [x_col] + y_cols + y2_cols
             def show_file_status(file_path, nfile, num_files):
-                window.status_left.setText(f"Opening: {os.path.basename(file_path)}")
-                window.status_center.setText(f"{nfile+1}/{num_files}")
+                status_bar_panel.status_left.setText(f"Opening: {os.path.basename(file_path)}")
+                status_bar_panel.status_center.setText(f"{nfile+1}/{num_files}")
                 progress = int((nfile + 1) / num_files * 100) if num_files > 0 else 0
-                window.status_progress.setValue(progress)
+                status_bar_panel.status_progress.setValue(progress)
                 QApplication.processEvents()  # Ensure UI updates immediately
             data = sampler.get_data(cols, (start_dt, end_dt), pre_open_hook=show_file_status)
             print('Data.shape:', data.shape)
@@ -171,9 +171,9 @@ def run_app():
                 QMessageBox.critical(window, 'Data Error', 'Data does not have enough columns for x and y.')
                 return
             # update status bar again
-            window.status_left.setText("Plotting Data")
-            window.status_center.setText("")
-            window.status_progress.setValue(0)
+            status_bar_panel.status_left.setText("Plotting Data")
+            status_bar_panel.status_center.setText("")
+            status_bar_panel.status_progress.setValue(0)
             QApplication.processEvents()
 
             # extract the data and apply expressions
@@ -202,6 +202,7 @@ def run_app():
 
         plot_data = PlotData(x, ys, x_col, y_cols, y_expr, sampler.sampler_name, window._col_units, y2_list=ys2, y2_cols=y2_cols, y2_expr=y2_expr, date_plot=x_col == DMJD)
         fig, ax = plot_data.plot_data()
+
         # Remove previous plot if exists
         if hasattr(window, 'canvas'):
             window.canvas.setParent(None)
@@ -232,38 +233,19 @@ def run_app():
         # Switch to graph tab
         tab_widget.setCurrentWidget(graph_tab)
 
+    # connect our buttons to actions
     window.plot_button.clicked.connect(on_plot_clicked)
     open_action.triggered.connect(open_folder)
 
+    # the tab holds our selection panel and graph tab
     tab_widget = QTabWidget(window)
+
+    # start the selection tab that has most of the widgets
     selection_tab = QWidget()
     selection_layout = QVBoxLayout(selection_tab)
-    # Status bar for the selection tab (split into three parts)
-    from PySide6.QtWidgets import QStatusBar, QLabel
 
-    window.status_bar = QStatusBar()
-    window.status_left = QLabel('Ready')
-    window.status_center = QLabel('')
-    from PySide6.QtWidgets import QProgressBar, QHBoxLayout
-    window.status_progress = QProgressBar()
-    window.status_progress.setMinimum(0)
-    window.status_progress.setMaximum(100)
-    window.status_progress.setValue(0)
-    window.status_progress.setTextVisible(True)
-    outline_style = "border: 1px solid #444; padding: 2px; border-radius: 3px;"
-    window.status_left.setStyleSheet(outline_style)
-    window.status_center.setStyleSheet(outline_style)
-    window.status_progress.setStyleSheet(outline_style)
-    window.status_bar.setStyleSheet("QStatusBar { border: 1px solid #222; }")
-    status_container = QWidget()
-    status_layout = QHBoxLayout()
-    status_layout.setContentsMargins(0, 0, 0, 0)
-    status_layout.setSpacing(0)
-    status_layout.addWidget(window.status_left, stretch=70)
-    status_layout.addWidget(window.status_center, stretch=15)
-    status_layout.addWidget(window.status_progress, stretch=15)
-    status_container.setLayout(status_layout)
-    window.status_bar.addPermanentWidget(status_container, 1)
+    # Instantiate and add the status bar panel
+    status_bar_panel = StatusBarPanel(window)
 
     # Instantiate and add the panel for selecting the time range
     time_range_panel = TimeRangePanel(window)
@@ -271,6 +253,7 @@ def run_app():
     # Instantiate and add the panel for selecting the data
     data_selection_panel = DataSelectionPanel(aliases, loadSampler, window)
 
+    # right now we only have one button for plotting
     buttons_panel = QGroupBox('buttons')
     buttons_layout = QHBoxLayout()
     buttons_layout.addWidget(window.plot_button)
@@ -280,13 +263,17 @@ def run_app():
     selection_layout.addWidget(time_range_panel)
     selection_layout.addWidget(data_selection_panel)
     selection_layout.addWidget(buttons_panel)
-    selection_layout.addWidget(window.status_bar)
+    selection_layout.addWidget(status_bar_panel)
     selection_tab.setLayout(selection_layout)
 
-    graph_tab = QWidget()
+    # Add the selection tab (first one) to the tab widget
     tab_widget.addTab(selection_tab, 'selection')
+
+    # Create the graph tab - it's empty for now
+    graph_tab = QWidget()
     tab_widget.addTab(graph_tab, 'graph')
 
+    # Main layout for the window
     layout = QVBoxLayout(window)
     layout.setMenuBar(menubar)
     layout.addWidget(tab_widget)
