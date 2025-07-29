@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from astropy.io import fits
 import numpy as np
 from SamplerData import SamplerData
+import pytest
 
 class TestSamplerData(unittest.TestCase):
     def setUp(self):
@@ -29,6 +30,9 @@ class TestSamplerData(unittest.TestCase):
         hdu1 = fits.BinTableHDU.from_columns(cols)
         hdul = fits.HDUList([fits.PrimaryHDU(), hdu1])
         hdul.writeto(self.fits_filename)
+
+        self.weatherCols = ['DMJD', 'WINDVEL', 'WINDDIR', 'HUMIDITY_1', 'HUMIDITY_2', 'TEMP_1', 'TEMP_2', 'PRESSURE_1', 'PRESSURE_2', 'TEMP_3', 'TEMP_4', 'DEW_POINT', 'WIND_CHILL', 'PARTIAL_PRESSURE_H2O']
+        self.weatherUnits = ['d', 'MetersPerSec', 'Degrees', 'none', 'none', 'Celsius', 'Celsius', 'MilliBars', 'MilliBars', 'Celsius', 'Celsius', 'Celsius', 'Celsius', 'MilliBars']
 
     def tearDown(self):
         shutil.rmtree(self.test_dir)
@@ -82,6 +86,66 @@ class TestSamplerData(unittest.TestCase):
         # Test with invalid expression (should return original data)
         result = self.sampler.apply_expression_to_data(arr, 'data + unknown_var')
         np.testing.assert_array_equal(result, arr)
+
+    def test_find_youngest_fits_no_files(self):
+        # sampler = SamplerData(str(self.test_dir))
+        sampler = SamplerData("..")
+        assert sampler.find_youngest_fits() is None
+
+    def test_get_second_table_columns_with_file(self):
+        sampler = SamplerData('Weather-Weather2-weather2')
+        file = sampler.find_youngest_fits()
+        if file:
+            cols = sampler.get_second_table_columns()
+            assert isinstance(cols, list)
+            print("Second table columns:", cols)
+            self.assertEqual(cols, self.weatherCols)
+        sampler.directory = "invalid/path"
+        sampler.youngest_file = "not there"
+        # Test with an invalid directory
+        # with pytest.raises(Exception):
+        cols = sampler.get_second_table_columns()      
+        self.assertEqual(cols, [])
+
+    def test_get_second_table_units(self):
+        sampler = SamplerData('Weather-Weather2-weather2')
+        file = sampler.find_youngest_fits()                 
+        if file:
+            units = sampler.get_second_table_units()
+            assert isinstance(units, list)
+            print("Second table units:", units)
+            self.assertEqual(units, self.weatherUnits)
+
+    def test_invalid_directory(self):
+        with pytest.raises(Exception):
+            SamplerData('invalid/path')
+
+    def test_get_fits_files_in_range(self):
+        # This test assumes the Weather-Weather2-weather2 directory exists and contains FITS files
+        sampler = SamplerData('Weather-Weather2-weather2')
+        start = datetime(2025, 7, 7, 0, 0, 0)
+        end = datetime(2025, 7, 8, 0, 0, 0)
+        fits_files = sampler.get_fits_files_in_range(start, end)
+        # Should return a list (possibly empty) of .fits files
+        self.assertIsInstance(fits_files, list)
+        for f in fits_files:
+            self.assertTrue(f.endswith('.fits'))
+        # If there are files, check that their datetimes are within the range
+        for f in fits_files:
+            dt = sampler.get_datetime_from_filename(os.path.basename(f))
+            self.assertGreaterEqual(dt, start)
+            self.assertLessEqual(dt, end)
+
+        # test out of range dates
+
+        start = datetime(2026, 7, 7, 0, 0, 0)
+        end = datetime(2026, 7, 8, 0, 0, 0)
+        fits_files = sampler.get_fits_files_in_range(start, end)
+        # Should return a list (possibly empty) of .fits files
+        self.assertIsInstance(fits_files, list)
+        print("Fits files in range:", fits_files)
+        # reveals actual bug!!!
+        self.assertEqual(len(fits_files), 0)
 
 if __name__ == '__main__':
     unittest.main()
