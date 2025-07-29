@@ -175,7 +175,7 @@ class SamplerData:
         if start_mjd is None or end_mjd is None:
             return np.array([])
         files_in_range = self.get_fits_files_from_names(start, end)
-        print('Files in range:', files_in_range)
+        # print('Files in range:', files_in_range)
         result = []
         for ifile, file_path in enumerate(files_in_range):
             try:
@@ -183,19 +183,19 @@ class SamplerData:
                     pre_open_hook(file_path, ifile, len(files_in_range))
                 with fits.open(file_path) as hdul:
                     if len(hdul) < 2 or not hasattr(hdul[1], 'data'):
-                        print(f"Skipping {file_path}: no second table HDU or data.")
+                        # Skipping file: no second table HDU or data.
                         continue
                     data = hdul[1].data
                     # Ensure all requested columns and 'DMJD' exist
                     if not all(col in data.names for col in columns) or 'DMJD' not in data.names:
-                        print(f"Skipping {file_path}: not all requested columns or 'DMJD' exist.")
+                        # Skipping file: not all requested columns or 'DMJD' exist.
                         continue
                     mask = (data['DMJD'] >= start_mjd) & (data['DMJD'] <= end_mjd)
-                    print(f"Mask for {file_path}: {mask}")
+                    # print(f"Mask for {file_path}: {mask}")
                     # Extract the data for the specified columns
                     rows = zip(*(data[col][mask] for col in columns))
                     # print(f"Extracted {len(rows)} rows from {file_path} for columns {columns}")
-                    print("rows:", rows)
+                    # print("rows:", rows)
                     result.extend(rows)
             except Exception as e:
                 print(f"Error processing {file_path}: {e}")

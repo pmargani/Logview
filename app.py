@@ -39,7 +39,7 @@ def run_app():
         left = screen_geometry.left() + (screen_geometry.width() - width) // 2
         top = screen_geometry.top() + (screen_geometry.height() - height) // 2
     else:
-        print("No primary screen found, using fallback dimensions.")
+        # No primary screen found, using fallback dimensions.
         width, height, left, top = 400, 300, 100, 100  # fallback
 
     app = QApplication(sys.argv)
@@ -127,19 +127,19 @@ def run_app():
             return
         start_dt = time_range_panel.start_picker.dateTime().toPython()
         end_dt = time_range_panel.end_picker.dateTime().toPython()
-        print('Start:', start_dt, 'End:', end_dt)
+        # print('Start:', start_dt, 'End:', end_dt)
         if start_dt > end_dt:
             QMessageBox.critical(window, 'Date Error', 'Start date must be before or equal to end date.')
             return
 
         x_col = data_selection_panel.x_dropdown.currentData()
-        print('Selected x column:', x_col)
+        # print('Selected x column:', x_col)
         y_selected_items = data_selection_panel.y_list.selectedItems()
         if not y_selected_items:
             QMessageBox.critical(window, 'Selection Error', 'Please select at least one y column.')
             return
         y_cols = [item.data(0x0100) for item in y_selected_items]
-        print('Selected y columns:', y_cols)
+        # print('Selected y columns:', y_cols)
 
         y2_selected_items = data_selection_panel.y2_list.selectedItems()
         y2_cols = [item.data(0x0100) for item in y2_selected_items]
@@ -156,7 +156,7 @@ def run_app():
                 status_bar_panel.status_progress.setValue(progress)
                 QApplication.processEvents()  # Ensure UI updates immediately
             data = sampler.get_data(cols, (start_dt, end_dt), pre_open_hook=show_file_status)
-            print('Data.shape:', data.shape)
+            # print('Data.shape:', data.shape)
             if data.shape[1] < 2:
                 QMessageBox.critical(window, 'Data Error', 'Data does not have enough columns for x and y.')
                 return
@@ -172,17 +172,17 @@ def run_app():
             x = sampler.apply_expression_to_data(x, apply_expr)
 
             ys = np.array([data[:, i] for i in range(1, num_y_cols+1)])
-            print("ys:", ys)
+            # print("ys:", ys)
             apply_expr = data_selection_panel.y_expr.toPlainText().replace('y', 'data')
-            print("apply_expr:", apply_expr)
+            # print("apply_expr:", apply_expr)
             ys = sampler.apply_expression_to_data(ys, apply_expr)
-            print("ys:", ys)
+            # print("ys:", ys)
             y_expr = apply_expr.replace('data', '')
 
             ys2 = np.array([data[:, i] for i in range(num_y_cols+1, num_y_cols+1 + num_y2_cols)])
             apply_expr = data_selection_panel.y2_expr.toPlainText().replace('y2', 'data')
             ys2 = sampler.apply_expression_to_data(ys2, apply_expr)
-            print("ys2:", ys2)
+            # print("ys2:", ys2)
             y2_expr = apply_expr.replace('data', '')
 
             y_col = y_cols
