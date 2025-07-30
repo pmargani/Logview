@@ -1,0 +1,133 @@
+@startuml
+
+title GBT LogView Classes
+
+class DataSelectionPanel {
+    on_alias_selection_changed()
+    on_load_button_clicked()
+        x_dropdown
+    y_list
+    y2_list
+    x_expr
+    y_expr
+    y2_expr
+    alias_list
+    load_button
+    __init__()
+}
+Qt.QGroupBox <|-- DataSelectionPanel
+
+class TimeRangePanel {
+    keyPressEvent()
+    set_quick_range()
+    on_interval_changed()
+        layout
+    using_most_recent_label
+    quick_range_layout
+    last_hour_btn
+    last_day_btn
+    last_week_btn
+    last_month_btn
+    or_by_relative_label
+    for_row_layout
+    for_label
+    for_text
+    interval_dropdown
+    direction_dropdown
+    for_picker
+    or_directly_label
+    pickers_layout
+    start_picker
+    end_picker
+    __init__()
+}
+Qt.QGroupBox <|-- TimeRangePanel
+
+
+class StatusBarPanel {
+        status_left
+    status_center
+    status_progress
+    __init__()
+}
+Qt.QStatusBar <|-- StatusBarPanel
+
+
+
+
+class MenuBar {
+    show_help_dialog()
+        open_action
+    exit_action
+    help_action
+    __init__()
+}
+Qt.QMenuBar <|-- MenuBar
+
+class PlotData {
+    __repr__()
+    plot_data()
+        x
+    y_list
+    x_col
+    y_cols
+    y_expr
+    date_plot
+    sampler_name
+    col_units
+    y2_list
+    y2_cols
+    y2_expr
+    __init__()
+}
+
+class SamplerData {
+    find_youngest_fits()
+    get_second_table_columns()
+    get_second_table_units()
+    datetime_to_mjd()
+    get_datetime_from_filename()
+    get_fits_files_from_names()
+    get_data()
+    apply_expression_to_data()
+        directory
+    youngest_file
+    sampler_name
+    youngest_file
+    colnames
+    colnames
+    __init__()
+}
+
+class LogViewWindow {
+    open_folder()
+    loadSampler()
+    on_plot_clicked()
+    show_file_status()
+    menubar
+    plot_button
+    status_bar_panel
+    time_range_panel
+    data_selection_panel
+    buttons_panel
+    tab_widget
+    selection_tab
+    selection_layout
+    graph_tab
+    _sampler
+    _col_units
+    canvas
+    toolbar
+    graph_layout
+    __init__()
+}
+Qt.QWidget <|-- LogViewWindow
+
+MenuBar *-- LogViewWindow
+StatusBarPanel *-- LogViewWindow
+DataSelectionPanel *-- LogViewWindow
+StatusBarPanel *-- LogViewWindow
+PlotData *-- LogViewWindow
+SamplerData *-- LogViewWindow
+
+@enduml
