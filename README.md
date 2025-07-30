@@ -23,11 +23,14 @@ This is a simple Python script project. It provides a starting point for Python 
    ```
 
 ## Project Structure
-- `main.py`: Entry point script (Hello World example)
+- `main.py`: Entry point for application
 - `requirements.txt`: List of dependencies (empty by default)
 - `.github/copilot-instructions.md`: Copilot custom instructions and requirements
 
----
+## Design
 
-Feel free to add more scripts and requirements as your project grows.
+
+![GbtLogViewClasses](GbtLogViewClasses.png)
+
+
 
