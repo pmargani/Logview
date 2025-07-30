@@ -27,7 +27,7 @@ class PlotData:
     
 
     def plot_data(self):
-
+        "plots the data contained in the member vars"
         fig = Figure(figsize=(4, 3))
         ax = fig.add_subplot(111)
         ax2 = None
@@ -37,11 +37,11 @@ class PlotData:
         color_map = cm.get_cmap('tab10' if num_plots <= 10 else 'tab20', num_plots)
         color_iter = iter(color_map.colors)
 
+        # plot x vs y, including managing colors and labels
         if self.date_plot:
             x_mjd = Time(self.x, format='mjd').datetime
             for y, y_col in zip(self.y_list, self.y_cols):
                 color = next(color_iter)
-                print("plot_date for y_col", y_col)
                 label = f"{y_col} ({self.col_units.get(y_col, '')})"
                 ax.plot_date(x_mjd, y, '-', label=label, color=color)
             ax.set_xlabel(x_mjd[0].strftime('%Y-%m-%d %H:%M:%S'))
@@ -61,7 +61,6 @@ class PlotData:
             if self.date_plot:
                 for y2, y2_col in zip(self.y2_list, self.y2_cols):
                     color = next(color_iter)
-                    print("plot_date for y2_col", y2_col)
                     label = f"{y2_col} ({self.col_units.get(y2_col, '')})"
                     ax2.plot_date(x_mjd, y2, '--', label=label, color=color)
             else:

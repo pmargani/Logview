@@ -7,7 +7,10 @@ import numpy as np
 
 class SamplerData:
 
-
+    """
+    A class for reading data in FITS files that were created by the GBT program sampler2log
+    """
+    
     def __init__(self, directory):
         self.directory = directory
         self.youngest_file = None
@@ -17,6 +20,7 @@ class SamplerData:
             raise Exception(f"Directory does not exist: {self.directory}")
         
     def find_youngest_fits(self):
+        "for the current directory, return the FITS file with the youngest creation time"
         fits_files = [f for f in os.listdir(self.directory) if f.lower().endswith('.fits')]
         if not fits_files:
             return None
@@ -25,6 +29,7 @@ class SamplerData:
         return self.youngest_file
 
     def get_second_table_columns(self):
+        "The second table in these FITS files contains the data, specified by columns"
         if not self.youngest_file:
             return []
         try:
@@ -37,6 +42,7 @@ class SamplerData:
             return []
 
     def get_second_table_units(self):
+        "The second table in these FITS files contains the data, including unit info"
         if not self.youngest_file:
             return []
         try:
@@ -144,6 +150,8 @@ class SamplerData:
         result = []
         for ifile, file_path in enumerate(files_in_range):
             try:
+                # an example of a pre_open_hook might be a method for updating the status
+                # bar of an application using this class
                 if pre_open_hook is not None:
                     pre_open_hook(file_path, ifile, len(files_in_range))
                 with fits.open(file_path) as hdul:
@@ -156,11 +164,8 @@ class SamplerData:
                         # Skipping file: not all requested columns or 'DMJD' exist.
                         continue
                     mask = (data['DMJD'] >= start_mjd) & (data['DMJD'] <= end_mjd)
-                    # print(f"Mask for {file_path}: {mask}")
                     # Extract the data for the specified columns
                     rows = zip(*(data[col][mask] for col in columns))
-                    # print(f"Extracted {len(rows)} rows from {file_path} for columns {columns}")
-                    # print("rows:", rows)
                     result.extend(rows)
             except Exception as e:
                 print(f"Error processing {file_path}: {e}")

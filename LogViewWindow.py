@@ -18,7 +18,15 @@ DMJD = "DMJD"
 class LogViewWindow(QWidget):
 
     """
-    This is the main window for the GBT LogView application.
+    This is the main window for the GBT LogView application.  This application if for plotting elements
+    of data contained in FITS files produced by the GBT program sampler2log.
+    Components include:
+       * TimeRangePanel for choosing the start and end times for which data will be plotted
+       * DataSelectionPanel for choosing what FITS files to load and which of the columns to plot
+       * StatusBarPanel for updating progress of loading data
+       * standard Menu
+       * PlotData (model) for constructing matplotlib figure of selected data
+       * SamplerData (model) for reading the data to be plotted from FITS files created by sampler2log
     """
     
     def __init__(self, app):
@@ -41,6 +49,7 @@ class LogViewWindow(QWidget):
             "does not exist": None,
         }
 
+        # creaate and layout the major widget components
         self.menubar = MenuBar(self, app, self.open_folder)
         self.plot_button = QPushButton('Plot')
         self.plot_button.setEnabled(False)
@@ -71,6 +80,7 @@ class LogViewWindow(QWidget):
         self._col_units = None
 
     def open_folder(self):
+        "called by the Open menu action: calls loadSampler function"
         dir_path = QFileDialog.getExistingDirectory(self, 'Select Folder')
         if not dir_path:
             self.plot_button.setEnabled(False)
@@ -79,7 +89,9 @@ class LogViewWindow(QWidget):
         self.loadSampler(dir_path)
 
     def loadSampler(self, dir_path):
+        "called by Open menu action AND if an alias is loaded in the DataSelectionPanel"
         sampler = SamplerData(dir_path)
+        # we use the youngest file to figure out the meta-data: columns and units
         youngest_file = sampler.find_youngest_fits()
         if not youngest_file:
             QMessageBox.information(self, 'No FITS Files', 'No .fits files found in the selected directory.')
@@ -94,12 +106,16 @@ class LogViewWindow(QWidget):
             self.plot_button.setEnabled(False)
             self._sampler = None
             return
+        # populate the data selection col widgets with the col and unit info
         self.data_selection_panel.x_dropdown.clear()
         self.data_selection_panel.y_list.clear()
+        # the x dropdown is simple enough
         for i, col in enumerate(colnames):
             display_text = f"{col} ({colunits[i]})" if colunits and i < len(colunits) else f"Column: {col}"
             self.data_selection_panel.x_dropdown.addItem(display_text, userData=col)
         self.data_selection_panel.x_dropdown.addItems(colnames)
+        # y dropdowns are more complicated: we want to display "col (units)", but return
+        # just the col value upon selection
         for col in colnames:
             display_text = f"{col} ({col_map[col]})"
             item = QListWidgetItem(display_text)
@@ -113,15 +129,18 @@ class LogViewWindow(QWidget):
         self._col_units = col_map
 
     def on_plot_clicked(self):
+        "called when the plot button is clicked - will determine data to plot and plot it"
         sampler = getattr(self, '_sampler', None)
         if not sampler:
             QMessageBox.warning(self, 'No Data', 'No FITS data loaded.')
             return
+        # get the time range of the data to plot
         start_dt = self.time_range_panel.start_picker.dateTime().toPython()
         end_dt = self.time_range_panel.end_picker.dateTime().toPython()
         if start_dt > end_dt:
             QMessageBox.critical(self, 'Date Error', 'Start date must be before or equal to end date.')
             return
+        # get the columns to plot
         x_col = self.data_selection_panel.x_dropdown.currentData()
         y_selected_items = self.data_selection_panel.y_list.selectedItems()
         if not y_selected_items:
@@ -135,19 +154,25 @@ class LogViewWindow(QWidget):
             num_y2_cols = len(y2_cols)
             cols = [x_col] + y_cols + y2_cols
             def show_file_status(file_path, nfile, num_files):
+                "a function for updating the status bar with info on how we are loading data"
                 self.status_bar_panel.status_left.setText(f"Opening: {os.path.basename(file_path)}")
                 self.status_bar_panel.status_center.setText(f"{nfile+1}/{num_files}")
                 progress = int((nfile + 1) / num_files * 100) if num_files > 0 else 0
                 self.status_bar_panel.status_progress.setValue(progress)
                 QApplication.processEvents()
+            # now that we know what data we want to plot and when, collect the data, updating
+            # the status bar as we go, since it could take a while    
             data = sampler.get_data(cols, (start_dt, end_dt), pre_open_hook=show_file_status)
             if data.shape[1] < 2:
                 QMessageBox.critical(self, 'Data Error', 'Data does not have enough columns for x and y.')
                 return
+            # we are done collecting data and are ready to plot, so update the status bar
             self.status_bar_panel.status_left.setText("Plotting Data")
             self.status_bar_panel.status_center.setText("")
             self.status_bar_panel.status_progress.setValue(0)
             QApplication.processEvents()
+
+            # here we apply the expressions defined by users to the data we collected
             x = data[:, 0]
             apply_expr = self.data_selection_panel.x_expr.toPlainText().replace('x', 'data')
             x = sampler.apply_expression_to_data(x, apply_expr)
@@ -162,8 +187,10 @@ class LogViewWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, 'Plot Error', f'Error retrieving data: {e}')
             return
+        # finally, we are ready to create a plot figure 
         plot_data = PlotData(x, ys, x_col, y_cols, y_expr, sampler.sampler_name, self._col_units, y2_list=ys2, y2_cols=y2_cols, y2_expr=y2_expr, date_plot=x_col == DMJD)
         fig, ax = plot_data.plot_data()
+        # and we update the graph tab to show this plot
         if hasattr(self, 'canvas'):
             self.canvas.setParent(None)
             del self.canvas

@@ -3,10 +3,23 @@ from datetime import datetime, timedelta
 from PySide6.QtCore import Qt
 
 class TimeRangePanel(QGroupBox):
+
+    """
+    This class provides many different ways to specify a time range that is used to 
+    select what data to plot.  The basic methods and associated widgets are:
+       * buttons for choosing last hour, day, week or month (most recent period)
+       * widgets for choosing a relative time
+       * finally, two time pickers for choosing directly start and end times
+    All downstream widgets are set if an upstream widget is set; that is, if a user
+    clicks the 'last week' button, this updates the relative and direct time widgets
+    to cover this time range.   
+    """
+
     def __init__(self, parent=None):
         super().__init__("Time Range", parent)
         self.layout = QVBoxLayout()
-
+        
+        # 1. first the most recent period buttons
         # Using most recent label
         self.using_most_recent_label = QLabel("Using most recent period:")
         self.layout.addWidget(self.using_most_recent_label)
@@ -21,11 +34,12 @@ class TimeRangePanel(QGroupBox):
             self.quick_range_layout.addWidget(btn)
         self.layout.addLayout(self.quick_range_layout)
 
+        # 2. now the relative time widgets
         # "or by relative time" label
         self.or_by_relative_label = QLabel("or by relative time")
         self.layout.addWidget(self.or_by_relative_label)
 
-        # For row
+        # We need a widget where you can only enter digits:
         class NumberOnlyTextEdit(QTextEdit):
             def keyPressEvent(self, event):
                 if event.text().isdigit() or event.key() in (Qt.Key_Backspace, Qt.Key_Delete, Qt.Key_Left, Qt.Key_Right, Qt.Key_Tab, Qt.Key_Enter, Qt.Key_Return):
@@ -53,6 +67,7 @@ class TimeRangePanel(QGroupBox):
         self.for_row_layout.addWidget(self.for_picker)
         self.layout.addLayout(self.for_row_layout)
 
+        # 3. finally the direct start and end widgets
         # "or directly:" label
         self.or_directly_label = QLabel("or directly:")
         self.layout.addWidget(self.or_directly_label)
@@ -78,10 +93,14 @@ class TimeRangePanel(QGroupBox):
 
         # --- Logic for quick range and interval changes ---
         def set_quick_range(hours):
+            "called when a most recent period button is clicked"
             now = datetime.utcnow()
             start = now - timedelta(hours=hours)
+            # change the downstream widgets:
+            # the direct start and end widgets
             self.start_picker.setDateTime(start)
             self.end_picker.setDateTime(now)
+            # and the relative time widgets
             self.for_text.setText("1")
             choices = {
                 1: 'hour(s)',
@@ -94,7 +113,9 @@ class TimeRangePanel(QGroupBox):
             self.for_picker.setDateTime(datetime.now())
 
         def on_interval_changed():
+            "called when one of the realtive time widgets is called"
             now = datetime.utcnow()
+            # convert the widget values to a time range
             try:
                 value = int(self.for_text.toPlainText())
             except ValueError:
@@ -125,13 +146,17 @@ class TimeRangePanel(QGroupBox):
             else:
                 start = ref_time - delta
                 end = ref_time
+            # and set the downstream direct start and end widgets    
             self.start_picker.setDateTime(start)
             self.end_picker.setDateTime(end)
 
+        # define the behavior of the most recent period buttons
         self.last_hour_btn.clicked.connect(lambda: set_quick_range(1))
         self.last_day_btn.clicked.connect(lambda: set_quick_range(24))
         self.last_week_btn.clicked.connect(lambda: set_quick_range(24 * 7))
         self.last_month_btn.clicked.connect(lambda: set_quick_range(24 * 30))
+
+        # define the behavior of the relative time widgets
         self.for_text.textChanged.connect(on_interval_changed)
         self.interval_dropdown.currentIndexChanged.connect(on_interval_changed)
         self.direction_dropdown.currentIndexChanged.connect(on_interval_changed)

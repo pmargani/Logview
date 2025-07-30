@@ -2,7 +2,12 @@ from PySide6.QtWidgets import QMenuBar, QMenu, QMessageBox
 from PySide6.QtGui import QAction
 
 class MenuBar(QMenuBar):
-    def __init__(self, window, app, open_action_handler):
+
+    """
+    This class creates a menu bar for the application with File and Help menus.
+    """
+    
+    def __init__(self, window, app, open_action_handler):   
         super().__init__(window)
         # File menu
         file_menu = QMenu('File', self)
@@ -10,6 +15,7 @@ class MenuBar(QMenuBar):
         open_action.triggered.connect(open_action_handler)
         file_menu.addAction(open_action)
 
+        # Exit action
         exit_action = QAction('Exit', self)
         exit_action.triggered.connect(app.quit)
         file_menu.addAction(exit_action)
