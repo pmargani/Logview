@@ -1,24 +1,36 @@
-from PySide6.QtWidgets import QGroupBox, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit, QComboBox, QDateTimeEdit
+"Module for TimeRangePanel class"
+
 from datetime import datetime, timedelta
+
+from PySide6.QtWidgets import (
+    QGroupBox,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QTextEdit,
+    QComboBox,
+    QDateTimeEdit
+)
 from PySide6.QtCore import Qt
 
 class TimeRangePanel(QGroupBox):
 
     """
-    This class provides many different ways to specify a time range that is used to 
+    This class provides many different ways to specify a time range that is used to
     select what data to plot.  The basic methods and associated widgets are:
        * buttons for choosing last hour, day, week or month (most recent period)
        * widgets for choosing a relative time
        * finally, two time pickers for choosing directly start and end times
     All downstream widgets are set if an upstream widget is set; that is, if a user
     clicks the 'last week' button, this updates the relative and direct time widgets
-    to cover this time range.   
+    to cover this time range.
     """
 
     def __init__(self, parent=None):
         super().__init__("Time Range", parent)
         self.layout = QVBoxLayout()
-        
+
         # 1. first the most recent period buttons
         # Using most recent label
         self.using_most_recent_label = QLabel("Using most recent period:")
@@ -41,8 +53,21 @@ class TimeRangePanel(QGroupBox):
 
         # We need a widget where you can only enter digits:
         class NumberOnlyTextEdit(QTextEdit):
+            "A QTextEdit that only allows digits and some control keys"
             def keyPressEvent(self, event):
-                if event.text().isdigit() or event.key() in (Qt.Key_Backspace, Qt.Key_Delete, Qt.Key_Left, Qt.Key_Right, Qt.Key_Tab, Qt.Key_Enter, Qt.Key_Return):
+                allowed_keys = (
+                    Qt.Key_Backspace,
+                    Qt.Key_Delete,
+                    Qt.Key_Left,
+                    Qt.Key_Right,
+                    Qt.Key_Tab,
+                    Qt.Key_Enter,
+                    Qt.Key_Return
+                )
+                if (
+                    event.text().isdigit()
+                    or event.key() in allowed_keys
+                ):
                     super().keyPressEvent(event)
                 else:
                     event.ignore()
@@ -114,7 +139,6 @@ class TimeRangePanel(QGroupBox):
 
         def on_interval_changed():
             "called when one of the realtive time widgets is called"
-            now = datetime.utcnow()
             # convert the widget values to a time range
             try:
                 value = int(self.for_text.toPlainText())
@@ -146,7 +170,7 @@ class TimeRangePanel(QGroupBox):
             else:
                 start = ref_time - delta
                 end = ref_time
-            # and set the downstream direct start and end widgets    
+            # and set the downstream direct start and end widgets
             self.start_picker.setDateTime(start)
             self.end_picker.setDateTime(end)
 

@@ -1,3 +1,4 @@
+"A module for StatusBarPanel class"
 from PySide6.QtWidgets import QStatusBar, QLabel, QWidget, QProgressBar, QHBoxLayout
 
 class StatusBarPanel(QStatusBar):

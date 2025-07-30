@@ -1,6 +1,8 @@
+"Module for SamplerData class"
+
 import os
-from astropy.io import fits
 from datetime import datetime
+from astropy.io import fits
 from astropy.time import Time
 import numpy as np
 
@@ -10,7 +12,7 @@ class SamplerData:
     """
     A class for reading data in FITS files that were created by the GBT program sampler2log
     """
-    
+
     def __init__(self, directory):
         self.directory = directory
         self.youngest_file = None
@@ -18,7 +20,7 @@ class SamplerData:
         self.sampler_name = os.path.basename(os.path.normpath(self.directory))
         if not os.path.isdir(self.directory):
             raise Exception(f"Directory does not exist: {self.directory}")
-        
+
     def find_youngest_fits(self):
         "for the current directory, return the FITS file with the youngest creation time"
         fits_files = [f for f in os.listdir(self.directory) if f.lower().endswith('.fits')]
@@ -53,7 +55,7 @@ class SamplerData:
                 return self.colnames
         except Exception:
             return []
-        
+
     def datetime_to_mjd(self, dt):
         """
         Converts a datetime object to Modified Julian Date (MJD) using astropy.
@@ -71,7 +73,7 @@ class SamplerData:
             return t.mjd
         except Exception:
             return None
-        
+
     def get_datetime_from_filename(self, filename):
         """
         Extracts a datetime object from a FITS filename formatted as '%Y_%m_%d_%H:%M:%S.fits'.
@@ -88,7 +90,7 @@ class SamplerData:
             return datetime.strptime(name, "%Y_%m_%d_%H:%M:%S")
         except ValueError:
             return None
-        
+
     def get_fits_files_from_names(self, start_datetime, end_datetime):
         """
         Returns a list of FITS files in the directory whose datetimes (parsed from filename)
@@ -100,7 +102,8 @@ class SamplerData:
             end_datetime (datetime): End of the datetime range.
 
         Returns:
-            list: List of FITS file paths within the datetime range, plus the file right before the range if it exists.
+            list: List of FITS file paths within the datetime range, plus the file right before
+            the range if it exists.
         """
         fits_files = [f for f in os.listdir(self.directory) if f.lower().endswith('.fits')]
         fits_files_full = sorted([os.path.join(self.directory, f) for f in fits_files])
@@ -123,22 +126,23 @@ class SamplerData:
         if before_start:
             files_in_range.insert(0, before_start)
         return files_in_range
-    
-    
+
+
 
 
 
     def get_data(self, columns, timestamp_range, pre_open_hook=None):
         """
-        Extracts data for specified columns within a given timestamp range from the second table of all FITS files
-        in the specified timestamp range.
+        Extracts data for specified columns within a given timestamp range from the second
+        table of all FITS files in the specified timestamp range.
 
         Args:
             columns (list): List of column names to extract.
             timestamp_range (tuple): (start, end) timestamps (inclusive).
 
         Returns:
-            np.ndarray: Array of tuples with values for the specified columns within the timestamp range from all relevant files.
+            np.ndarray: Array of tuples with values for the specified columns within the
+            timestamp range from all relevant files.
         """
         start, end = timestamp_range
         start_mjd = self.datetime_to_mjd(start)

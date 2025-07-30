@@ -1,30 +1,42 @@
-# import matplotlib.pyplot as plt
+"A module for the PlotData class"
 from matplotlib.figure import Figure
-from astropy.time import Time
-import itertools
 from matplotlib import cm
+from astropy.time import Time
 
 class PlotData:
     """
     Container for x and y data to be plotted.
     """
-    def __init__(self, x, y_list, x_col, y_cols, y_expr, sampler_name, col_units, y2_list=None, y2_cols=None, y2_expr=None, date_plot=False):
+    def __init__(
+        self,
+        x,
+        y_list,
+        x_col,
+        y_cols,
+        y_expr,
+        sampler_name,
+        col_units,
+        y2_list=None,
+        y2_cols=None,
+        y2_expr=None,
+        date_plot=False
+    ):
         self.x = x
         self.y_list = y_list  # list of y arrays
         self.x_col = x_col
         self.y_cols = y_cols  # list of y column names
-        self.y_expr  = y_expr 
+        self.y_expr  = y_expr
         self.date_plot = date_plot
         self.sampler_name = sampler_name
         self.col_units = col_units  # dictionary of column units
 
         self.y2_list = y2_list if y2_list is not None else []  # list of second y arrays
         self.y2_cols = y2_cols if y2_cols is not None else []   # list of second y column names
-        self.y2_expr = y2_expr 
+        self.y2_expr = y2_expr
 
     def __repr__(self):
         return f"PlotData(x={self.x}, y_list={self.y_list})"
-    
+
 
     def plot_data(self):
         "plots the data contained in the member vars"
@@ -52,7 +64,7 @@ class PlotData:
                 label = f"{y_col} ({self.col_units.get(y_col, '')})"
                 ax.plot(self.x, y, label=label, color=color)
         label = ", ".join(self.y_cols)
-        label = f"({label}){self.y_expr}" if self.y_expr else label    
+        label = f"({label}){self.y_expr}" if self.y_expr else label
         ax.set_ylabel(label)
 
         # Plot y2_list on a secondary y-axis if present
@@ -70,7 +82,7 @@ class PlotData:
                     ax2.plot(self.x, y2, '--', label=label, color=color)
             # ax2.set_ylabel(', '.join(self.y2_cols))
             label = ", ".join(self.y2_cols)
-            label = f"({label}){self.y2_expr}" if self.y2_expr else label    
+            label = f"({label}){self.y2_expr}" if self.y2_expr else label
             ax2.set_ylabel(label)
             # Combine legends from both axes
             lines, labels = ax.get_legend_handles_labels()

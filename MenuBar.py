@@ -1,3 +1,4 @@
+"Module for MenuBar class"
 from PySide6.QtWidgets import QMenuBar, QMenu, QMessageBox
 from PySide6.QtGui import QAction
 
@@ -6,8 +7,8 @@ class MenuBar(QMenuBar):
     """
     This class creates a menu bar for the application with File and Help menus.
     """
-    
-    def __init__(self, window, app, open_action_handler):   
+
+    def __init__(self, window, app, open_action_handler):
         super().__init__(window)
         # File menu
         file_menu = QMenu('File', self)
