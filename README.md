@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # prdTest Python Script Project
 
 This is a simple Python script project. It provides a starting point for Python scripting.
@@ -27,3 +28,7 @@ This is a simple Python script project. It provides a starting point for Python 
 ---
 
 Feel free to add more scripts and requirements as your project grows.
+=======
+# Logview
+A POC for using copilot to rewrite the Logview application
+>>>>>>> d0e505fe64e341916ba09f4ea4dbeffc64c0273b
