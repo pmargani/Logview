@@ -129,7 +129,7 @@ class LogViewWindow(QWidget):
 
     def open_folder(self):
         "called by the Open menu action: calls loadSampler function"
-        dir_path = QFileDialog.getExistingDirectory(self, 'Select Folder')
+        dir_path = QFileDialog.getExistingDirectory(self, 'Select Folder', self.rootDir)
         if not dir_path:
             self.plot_button.setEnabled(False)
             self._sampler = None
