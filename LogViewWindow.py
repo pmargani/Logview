@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-from PySide6.QtWidgets import QApplication 
+from PySide6.QtWidgets import QApplication
 
 from PySide6.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QFileDialog, QMessageBox, QGroupBox, QHBoxLayout, QPushButton, QListWidgetItem
 from PySide6.QtGui import QGuiApplication
@@ -28,7 +28,7 @@ class LogViewWindow(QWidget):
        * PlotData (model) for constructing matplotlib figure of selected data
        * SamplerData (model) for reading the data to be plotted from FITS files created by sampler2log
     """
-    
+
     def __init__(self, app):
         super().__init__()
         self.setWindowTitle('GBT LogView')
@@ -161,8 +161,12 @@ class LogViewWindow(QWidget):
                 self.status_bar_panel.status_progress.setValue(progress)
                 QApplication.processEvents()
             # now that we know what data we want to plot and when, collect the data, updating
-            # the status bar as we go, since it could take a while    
+            # the status bar as we go, since it could take a while
             data = sampler.get_data(cols, (start_dt, end_dt), pre_open_hook=show_file_status)
+            print(f"data.shape: {data.shape}")
+            if data.shape[0] == 0:
+                QMessageBox.critical(self, 'Data Error', 'No data returned for the selected time range.')
+                return
             if data.shape[1] < 2:
                 QMessageBox.critical(self, 'Data Error', 'Data does not have enough columns for x and y.')
                 return
@@ -187,7 +191,7 @@ class LogViewWindow(QWidget):
         except Exception as e:
             QMessageBox.critical(self, 'Plot Error', f'Error retrieving data: {e}')
             return
-        # finally, we are ready to create a plot figure 
+        # finally, we are ready to create a plot figure
         plot_data = PlotData(x, ys, x_col, y_cols, y_expr, sampler.sampler_name, self._col_units, y2_list=ys2, y2_cols=y2_cols, y2_expr=y2_expr, date_plot=x_col == DMJD)
         fig, ax = plot_data.plot_data()
         # and we update the graph tab to show this plot
