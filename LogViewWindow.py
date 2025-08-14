@@ -98,8 +98,15 @@ class LogViewWindow(QWidget):
             self.plot_button.setEnabled(False)
             self._sampler = None
             return
-        colnames = sampler.get_second_table_columns()
-        colunits = sampler.get_second_table_units()
+                # get the time range of the data to plot
+        start_dt = self.time_range_panel.start_picker.dateTime().toPython()
+        end_dt = self.time_range_panel.end_picker.dateTime().toPython()
+        # colnames = sampler.get_second_table_columns()
+        # colunits = sampler.get_second_table_units()
+        colnames, colunits, msg = sampler.find_column_info(start_dt, end_dt)
+        if colnames is None or colunits is None:
+            QMessageBox.critical(self, 'Column Info Error', msg)
+            return
         col_map = {col: colunits[i] for i, col in enumerate(colnames)}
         if not colnames:
             QMessageBox.warning(self, 'FITS File', f'No second table HDU with columns found in {os.path.basename(youngest_file)}.')

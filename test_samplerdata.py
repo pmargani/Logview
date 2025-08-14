@@ -61,7 +61,14 @@ class TestSamplerData(unittest.TestCase):
         start = datetime(2025, 7, 7, 0, 0, 0)
         end = datetime(2025, 7, 8, 0, 0, 0)
         files = self.sampler.get_fits_files_from_names(start, end)
+        self.assertEqual(len(files), 1)
         self.assertTrue(any(f.endswith('.fits') for f in files))
+
+        # now test for not finding files
+        start = datetime(2026, 7, 9, 0, 0, 0)
+        end = datetime(2026, 7, 10, 0, 0, 0)
+        files = self.sampler.get_fits_files_from_names(start, end)
+        self.assertEqual(len(files), 0)
 
     def test_get_data(self):
         def print_it(filename, n, m):
@@ -104,12 +111,12 @@ class TestSamplerData(unittest.TestCase):
         sampler.youngest_file = "not there"
         # Test with an invalid directory
         # with pytest.raises(Exception):
-        cols = sampler.get_second_table_columns()      
+        cols = sampler.get_second_table_columns()
         self.assertEqual(cols, [])
 
     def test_get_second_table_units(self):
         sampler = SamplerData('Weather-Weather2-weather2')
-        file = sampler.find_youngest_fits()                 
+        file = sampler.find_youngest_fits()
         if file:
             units = sampler.get_second_table_units()
             assert isinstance(units, list)

@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from astropy.io import fits
 from astropy.time import Time
+from isort import file
 import numpy as np
 
 
@@ -21,6 +22,30 @@ class SamplerData:
         if not os.path.isdir(self.directory):
             raise Exception(f"Directory does not exist: {self.directory}")
 
+    def find_column_info(self, start_datetime, end_datetime):
+        startStr = start_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        endStr = end_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        print(f"Finding column info between {start_datetime} and {end_datetime}")
+        files = self.get_fits_files_from_names(start_datetime, end_datetime)
+        if not files:
+            # raise Exception("No FITS files found in the specified range.")
+            msg = f"No FITS files found in time range {startStr} to {endStr}"
+            # logging.error(msg)
+            return None, None, msg
+
+        youngest_file = files[0]
+        oldest_files = files[-1]
+
+        cols1 = self.get_second_table_columns(file=youngest_file)
+        cols2 = self.get_second_table_columns(file=oldest_files)
+        if cols1 != cols2:
+            # raise Exception("Column names do not match between the youngest and oldest files. Choose a date range where the columns do not change")
+            msg = f"Column names do not match for files between {startStr} and {endStr}. Choose a date range where the columns do not change"
+            return None, None, msg
+        units = self.get_second_table_units(file=oldest_files)
+        return cols1, units, None
+
+
     def find_youngest_fits(self):
         "for the current directory, return the FITS file with the youngest creation time"
         fits_files = [f for f in os.listdir(self.directory) if f.lower().endswith('.fits')]
@@ -30,10 +55,13 @@ class SamplerData:
         self.youngest_file = max(fits_files_full, key=os.path.getmtime)
         return self.youngest_file
 
-    def get_second_table_columns(self):
+    def get_second_table_columns(self, file=None):
         "The second table in these FITS files contains the data, specified by columns"
-        if not self.youngest_file:
-            return []
+        if file is None:
+            if not self.youngest_file:
+                return []
+        else:
+            self.youngest_file = file
         try:
             with fits.open(self.youngest_file) as hdul:
                 if len(hdul) < 2 or not hasattr(hdul[1], 'columns'):
@@ -43,10 +71,14 @@ class SamplerData:
         except Exception:
             return []
 
-    def get_second_table_units(self):
+    def get_second_table_units(self, file=None):
         "The second table in these FITS files contains the data, including unit info"
-        if not self.youngest_file:
-            return []
+        if file is None:
+            if not self.youngest_file:
+                return []
+        else:
+            self.youngest_file = file
+
         try:
             with fits.open(self.youngest_file) as hdul:
                 if len(hdul) < 2 or not hasattr(hdul[1], 'columns'):
@@ -91,7 +123,7 @@ class SamplerData:
         except ValueError:
             return None
 
-    def get_fits_files_from_names(self, start_datetime, end_datetime):
+    def get_fits_files_from_names(self, start_datetime, end_datetime, before=False):
         """
         Returns a list of FITS files in the directory whose datetimes (parsed from filename)
         fall within the given datetime range, and also includes the file (if any) with the latest
@@ -111,19 +143,20 @@ class SamplerData:
         before_start = None
         before_start_dt = None
 
-
+        # print(f"date range: {start_datetime} to {end_datetime}")
         for file_path in fits_files_full:
             file_dt = self.get_datetime_from_filename(file_path)
             if not file_dt:
                 continue
             if start_datetime <= file_dt <= end_datetime:
+
                 files_in_range.append(file_path)
-            elif file_dt < start_datetime:
+            elif before and file_dt < start_datetime:
                 if before_start is None or file_dt > before_start_dt:
                     before_start = file_path
                     before_start_dt = file_dt
 
-        if before_start:
+        if before and before_start:
             files_in_range.insert(0, before_start)
         return files_in_range
 
