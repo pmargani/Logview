@@ -1,3 +1,4 @@
+
 from PySide6.QtWidgets import QGroupBox, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit, QComboBox, QListWidget, QListWidgetItem, QGridLayout, QMessageBox
 import os
 
@@ -9,8 +10,14 @@ class DataSelectionPanel(QGroupBox):
     and load data from predefined aliases.
     """
 
-    def __init__(self, aliases, loadSampler, parent=None):
+    def __init__(self, aliases, loadSampler, parent=None, rootDir=None):
         super().__init__(parent)
+
+        if rootDir is None:
+            self.rootDir = '.'
+        else:
+            self.rootDir = rootDir
+
         self.setTitle('Data Selection')
         layout = QHBoxLayout()
 
@@ -52,7 +59,7 @@ class DataSelectionPanel(QGroupBox):
         grid_layout.addWidget(self.y2_expr, 3, 2)
         fit_columns_panel.setLayout(grid_layout)
 
-        # Right hand side panel 
+        # Right hand side panel
         # this contains a list of aliases that get populated from a config file;
         # an alias is a shorthand for a directory named after a sampler holding FITS files
         right_panel = QGroupBox('Aliases')
@@ -83,10 +90,11 @@ class DataSelectionPanel(QGroupBox):
                 QMessageBox.critical(self, 'Invalid Directory', f'The directory {dir_path} for alias "{alias}" does not exist.')
                 return
             # finally call the function given that reads the FITS files to populate the column widgets
-            loadSampler(dir_path)
+            loadSampler(os.path.join(self.rootDir, dir_path))
         self.load_button.clicked.connect(on_load_button_clicked)
         right_panel.setLayout(right_panel_layout)
 
         layout.addWidget(fit_columns_panel)
         layout.addWidget(right_panel)
         self.setLayout(layout)
+

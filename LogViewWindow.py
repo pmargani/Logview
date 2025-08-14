@@ -1,8 +1,9 @@
 import os
+import configparser
+import getpass
 import numpy as np
 
 from PySide6.QtWidgets import QApplication
-
 from PySide6.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QFileDialog, QMessageBox, QGroupBox, QHBoxLayout, QPushButton, QListWidgetItem
 from PySide6.QtGui import QGuiApplication
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT
@@ -44,10 +45,13 @@ class LogViewWindow(QWidget):
         self.setGeometry(left, top, width, height)
 
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        self.aliases = {
-            "Weather-Weather2-weather2": os.path.join(base_dir, 'Weather-Weather2-weather2'),
-            "does not exist": None,
-        }
+
+        self.rootDir = '.' # default
+        self.aliases = self.loadAliases()
+        # self.aliases = {
+        #     "Weather-Weather2-weather2": os.path.join(base_dir, 'Weather-Weather2-weather2'),
+        #     "does not exist": None,
+        # }
 
         # creaate and layout the major widget components
         self.menubar = MenuBar(self, app, self.open_folder)
@@ -55,7 +59,7 @@ class LogViewWindow(QWidget):
         self.plot_button.setEnabled(False)
         self.status_bar_panel = StatusBarPanel(self)
         self.time_range_panel = TimeRangePanel(self)
-        self.data_selection_panel = DataSelectionPanel(self.aliases, self.loadSampler, self)
+        self.data_selection_panel = DataSelectionPanel(self.aliases, self.loadSampler, parent=self, rootDir=self.rootDir)
         self.buttons_panel = QGroupBox('buttons')
         buttons_layout = QHBoxLayout()
         buttons_layout.addWidget(self.plot_button)
@@ -79,6 +83,50 @@ class LogViewWindow(QWidget):
         self._sampler = None
         self._col_units = None
 
+
+    def loadAliases(self):
+        """
+        Call loadAliasInfo using the first filename that we can find
+        """
+        # first choice: users .sparrow file
+        username = getpass.getuser()
+        user_sparrow_file = os.path.join(os.path.expanduser(f"~{username}"), ".sparrow")
+        # second choice: release .sparrow file
+        # is the YGOR_TELESCOPE env var defined?
+        ygor_telescope = os.environ.get("YGOR_TELESCOPE", "/home/gbt")
+        global_sparrow_file = os.path.join(ygor_telescope, "sparrow", "sparrow.conf")
+        # third choice: a sparrow file right here in the code
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        local_sparrow_file = os.path.join(base_dir, "sparrow.conf")
+        filenames = [
+            user_sparrow_file,
+            global_sparrow_file,
+            local_sparrow_file,
+        ]
+        for filename in filenames:
+            if os.path.isfile(filename):
+                print("load aliases from", filename)
+                return self.loadAliasInfo(filename)
+        return {}
+
+    def loadAliasInfo(self, filename):
+        """
+        Reads the given filename using configparser and returns a dictionary of items found in the 'Logs' section.
+        """
+        config = configparser.ConfigParser(strict=False)
+        config.read(filename)
+        if 'Logs' in config:
+            aliases = dict(config.items('Logs'))
+            aliases.pop('defaultlog', None)
+            roots = aliases.pop('roots', None)
+            if roots:
+                roots = [r.strip() for r in roots.split(' ')]
+                # just use the first one
+                self.rootDir = roots[0]
+
+            return aliases
+        return {}
+
     def open_folder(self):
         "called by the Open menu action: calls loadSampler function"
         dir_path = QFileDialog.getExistingDirectory(self, 'Select Folder')
@@ -90,6 +138,9 @@ class LogViewWindow(QWidget):
 
     def loadSampler(self, dir_path):
         "called by Open menu action AND if an alias is loaded in the DataSelectionPanel"
+        if not os.path.isdir(dir_path):
+            QMessageBox.critical(self, 'Invalid Directory', f'The directory {dir_path} does not exist.')
+            return
         sampler = SamplerData(dir_path)
         # we use the youngest file to figure out the meta-data: columns and units
         youngest_file = sampler.find_youngest_fits()
